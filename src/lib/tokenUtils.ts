@@ -7,9 +7,9 @@ import { setCookie } from "./cookieUtils";
 const getTokenSecondsRemaining =  (token: string): number => {
     if(!token) return 0;
     try {
-        const tokenPayload= jwt.decode(token) as JwtPayload;
+        const tokenPayload= jwt.decode(token) as JwtPayload | null;
 
-        if (tokenPayload && !tokenPayload.exp){
+        if (!tokenPayload || !tokenPayload.exp){
             return 0;
         }
 

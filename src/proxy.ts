@@ -5,6 +5,9 @@ import { isTokenExpiringSoon } from "./lib/tokenUtils";
 import { getNewTokensWithRefreshToken, getUserInfo } from "./services/auth.service";
 
 
+const JWT_ACCESS_SECRET = process.env.ACCESS_TOKEN_SECRET as string;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
+
 async function refreshTokenMiddleware (refreshToken : string) : Promise<boolean> {
     try {
         const refresh = await getNewTokensWithRefreshToken(refreshToken);
@@ -21,13 +24,20 @@ async function refreshTokenMiddleware (refreshToken : string) : Promise<boolean>
 
 export async function proxy (request : NextRequest) {
    try {
+
+    
        const { pathname } = request.nextUrl;
        const accessToken = request.cookies.get("accessToken")?.value;
        const refreshToken = request.cookies.get("refreshToken")?.value;
+       console.log(accessToken, "accessToken");
+       console.log(refreshToken, "refreshToken");
+       console.log(JWT_ACCESS_SECRET, "JWT_ACCESS_SECRET");
+       
+       const decodedAccessToken =  accessToken && jwtUtils.verifyToken(accessToken, JWT_ACCESS_SECRET).data;
+       console.log(decodedAccessToken, "decodedAccessToken");
 
-       const decodedAccessToken =  accessToken && jwtUtils.verifyToken(accessToken, process.env.JWT_ACCESS_SECRET as string).data;
-
-       const isValidAccessToken = accessToken && jwtUtils.verifyToken(accessToken, process.env.JWT_ACCESS_SECRET as string).success;
+       const isValidAccessToken = accessToken && jwtUtils.verifyToken(accessToken, JWT_ACCESS_SECRET).success;
+       console.log(isValidAccessToken, "isValidAccessToken");
 
        let userRole: UserRole | null = null;
 
@@ -44,7 +54,7 @@ export async function proxy (request : NextRequest) {
        const isAuth = isAuthRoute(pathname);
 
 
-       //proactively refresh token if refresh token exists and access token is expired or about to expire
+    //    //proactively refresh token if refresh token exists and access token is expired or about to expire
        if (isValidAccessToken && refreshToken && (await isTokenExpiringSoon(accessToken))){
             const requestHeaders = new Headers(request.headers);
 

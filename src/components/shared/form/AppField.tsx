@@ -11,6 +11,7 @@ interface AppFieldProps {
   placeholder?: string;
   append?: React.ReactNode;
   className?: string;
+  disabled?: boolean;
 }
 
 const AppField = ({
@@ -20,6 +21,7 @@ const AppField = ({
   placeholder,
   append,
   className,
+  disabled,
 }: AppFieldProps) => {
   return (
     <div className={cn("space-y-2", className)}>
@@ -37,6 +39,7 @@ const AppField = ({
           onChange={(e) => field.handleChange(e.target.value)}
           type={type}
           placeholder={placeholder}
+          disabled={disabled}
           className={cn(
             "w-full pr-10 focus-visible:ring-primary",
             field.state.meta.isTouched &&
@@ -52,7 +55,10 @@ const AppField = ({
       </div>
       {field.state.meta.isTouched && field.state.meta.errors.length > 0 && (
         <p className="text-xs font-medium text-destructive animate-in fade-in slide-in-from-top-1">
-          {field.state.meta.errors.join(", ")}
+          {field.state.meta.errors
+            .map((err: any) => (typeof err === "string" ? err : err.message))
+            .filter(Boolean)
+            .join(", ")}
         </p>
       )}
     </div>

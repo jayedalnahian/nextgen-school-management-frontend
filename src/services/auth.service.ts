@@ -124,3 +124,70 @@ export async function loginUser(payload: any) {
         };
     }
 }
+
+export async function forgotPassword(payload: { email: string }) {
+    try {
+        const res = await fetch(`${BASE_API_URL}/auth/forgot-password`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+            console.log(result);
+            return {
+                success: false,
+                message: result.message || "Failed to send reset link",
+                error: result
+            };
+        }
+
+        return {
+            success: true,
+            data: result.data
+        };
+    } catch (error: any) {
+        console.error("Forgot password error:", error);
+        return {
+            success: false,
+            message: error.message || "An unexpected error occurred",
+        };
+    }
+}
+
+export async function resetPassword(payload: any) {
+    try {
+        const res = await fetch(`${BASE_API_URL}/auth/reset-password`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+            return {
+                success: false,
+                message: result.message || "Failed to reset password",
+                error: result
+            };
+        }
+
+        return {
+            success: true,
+            data: result.data
+        };
+    } catch (error: any) {
+        console.error("Reset password error:", error);
+        return {
+            success: false,
+            message: error.message || "An unexpected error occurred",
+        };
+    }
+}

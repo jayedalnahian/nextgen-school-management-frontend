@@ -98,6 +98,10 @@ export function Navbar({
     ? getDefaultDashboardRoute(auth.role)
     : "/";
 
+  console.log(auth, "auth");
+  console.log(dashboardRoute, "dashboardRoute");
+  console.log(pathname, "pathname");
+
   const initials = auth.name
     ? auth.name
         .split(" ")

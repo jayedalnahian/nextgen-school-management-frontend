@@ -44,6 +44,17 @@ const LoginFormAuth = ({ redirectPath }: LoginFormProps) => {
         }
       } catch (error: any) {
         console.log(`Login failed: ${error.message}`);
+        
+        // Next.js redirect is handled by throwing an error, catch and manually apply it
+        if (error && typeof error === "object" && "digest" in error && typeof error.digest === "string" && error.digest.startsWith("NEXT_REDIRECT")) {
+          const redirectParts = error.digest.split(";");
+          const targetPath = redirectParts[2];
+          if (targetPath) {
+            window.location.href = targetPath;
+          }
+          return;
+        }
+
         setServerError(`Login failed: ${error.message}`);
       }
     },
@@ -160,7 +171,7 @@ const LoginFormAuth = ({ redirectPath }: LoginFormProps) => {
           className="w-full"
           onClick={() => {
             const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-            window.location.href = `${baseUrl}/api/v1/auth/login/google?redirect=/`;
+            window.location.href = `${baseUrl}/auth/login/google?redirect=/`;
           }}
         >
           <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
