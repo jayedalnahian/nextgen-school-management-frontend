@@ -319,9 +319,20 @@ export function Navbar({
                     className="w-full justify-start"
                     onClick={() => setMobileOpen(false)}
                   >
-                    <Link href="/my-profile">
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
+                    <Link href="/settings">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <Link href="/help">
+                      <HelpCircle className="mr-2 h-4 w-4" />
+                      Help & Support
                     </Link>
                   </Button>
 

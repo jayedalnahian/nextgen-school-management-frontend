@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function AppInput({ label, type = "text", ...props }: any) {
+export default function AppInput({ label, type = "text", ...props }: React.ComponentProps<"input"> & { label?: string }) {
   return (
     <div className="space-y-1">
       {label && <label className="text-sm font-medium">{label}</label>}
