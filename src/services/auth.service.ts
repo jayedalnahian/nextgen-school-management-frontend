@@ -77,3 +77,50 @@ export async function getUserInfo() {
         return null;
     }
 }
+
+export async function loginUser(payload: any) {
+    try {
+        const res = await fetch(`${BASE_API_URL}/auth/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+            return {
+                success: false,
+                message: result.message || "Login failed",
+                error: result
+            };
+        }
+
+        const { accessToken, refreshToken, token } = result.data;
+
+        if (accessToken) {
+            await setTokenInCookies("accessToken", accessToken);
+        }
+
+        if (refreshToken) {
+            await setTokenInCookies("refreshToken", refreshToken);
+        }
+
+        if (token) {
+            await setTokenInCookies("better-auth.session_token", token, 24 * 60 * 60);
+        }
+
+        return {
+            success: true,
+            data: result.data
+        };
+    } catch (error: any) {
+        console.error("Login error:", error);
+        return {
+            success: false,
+            message: error.message || "An unexpected error occurred",
+        };
+    }
+}
