@@ -7,7 +7,13 @@ import AppSubmitButton from "@/components/shared/form/AppSubmitButton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 import { ILoginPayload, loginZodSchema } from "@/zod/auth.validation";
 import { useForm } from "@tanstack/react-form";
@@ -43,10 +49,16 @@ const LoginFormAuth = ({ redirectPath }: LoginFormProps) => {
           return;
         }
       } catch (error: any) {
-        console.log(`Login failed: ${error.message}`);
-        
+        // console.log(`Login failed: ${error.message}`);
+
         // Next.js redirect is handled by throwing an error, catch and manually apply it
-        if (error && typeof error === "object" && "digest" in error && typeof error.digest === "string" && error.digest.startsWith("NEXT_REDIRECT")) {
+        if (
+          error &&
+          typeof error === "object" &&
+          "digest" in error &&
+          typeof error.digest === "string" &&
+          error.digest.startsWith("NEXT_REDIRECT")
+        ) {
           const redirectParts = error.digest.split(";");
           const targetPath = redirectParts[2];
           if (targetPath) {

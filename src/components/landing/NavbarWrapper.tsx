@@ -19,14 +19,17 @@ export default async function NavbarWrapper() {
 
   if (accessToken) {
     const decoded = jwtUtils.decodeToken(accessToken);
+   
     if (decoded) {
       const rawRole = (decoded.role as UserRole) ?? "ADMIN";
+     
       auth = {
         isLoggedIn: true,
         role: rawRole === "SUPER_ADMIN" ? "ADMIN" : rawRole,
         name: (decoded.name as string) ?? undefined,
         email: (decoded.email as string) ?? undefined,
       };
+     
     }
   }
 

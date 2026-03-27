@@ -149,17 +149,25 @@ export const parentNavItems: NavSection[] = [
 ];
 
 export const getNavItemsByRole = (role : UserRole) : NavSection[] => {
-    const commonNavItems = getCommonNavItems(role);
+    try {
+        const commonNavItems = getCommonNavItems(role) || [];
 
-    switch (role) {
-        case "SUPER_ADMIN":
-        case "ADMIN":
-            return [...commonNavItems, ...adminNavItems];
+        switch (role) {
+            case "SUPER_ADMIN":
+            case "ADMIN":
+                return [...commonNavItems, ...(adminNavItems || [])];
 
-        case "TEACHER":
-            return [...commonNavItems, ...teacherNavItems];
+            case "TEACHER":
+                return [...commonNavItems, ...(teacherNavItems || [])];
 
-        case "PARENT":
-            return [...commonNavItems, ...parentNavItems]
+            case "PARENT":
+                return [...commonNavItems, ...(parentNavItems || [])];
+
+            default:
+                return commonNavItems;
+        }
+    } catch (error) {
+        console.error("Error in getNavItemsByRole:", error);
+        return [];
     }
 }

@@ -34,10 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 
-import {
-  getDefaultDashboardRoute,
-  type UserRole,
-} from "@/lib/authUtils";
+import { getDefaultDashboardRoute, type UserRole } from "@/lib/authUtils";
 
 // ============================================================================
 // Types
@@ -94,13 +91,9 @@ export function Navbar({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const dashboardRoute = auth.role
-    ? getDefaultDashboardRoute(auth.role)
-    : "/";
+  const dashboardRoute = auth.role ? getDefaultDashboardRoute(auth.role) : "/";
 
-  console.log(auth, "auth");
-  console.log(dashboardRoute, "dashboardRoute");
-  console.log(pathname, "pathname");
+  // console.log(dashboardRoute, "dashboardRoute")
 
   const initials = auth.name
     ? auth.name
@@ -126,9 +119,7 @@ export function Navbar({
         onClick={mobile ? () => setMobileOpen(false) : undefined}
         className={cn(
           "text-sm font-medium transition-colors",
-          mobile
-            ? "block px-3 py-2.5 rounded-md"
-            : "relative px-1 py-2",
+          mobile ? "block px-3 py-2.5 rounded-md" : "relative px-1 py-2",
           isActive(link.href)
             ? "text-primary"
             : "text-muted-foreground hover:text-foreground",
@@ -159,9 +150,7 @@ export function Navbar({
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-transform group-hover:scale-105">
             <GraduationCap className="h-5 w-5" />
           </div>
-          <span className="text-lg font-bold tracking-tight">
-            {brandName}
-          </span>
+          <span className="text-lg font-bold tracking-tight">{brandName}</span>
         </Link>
 
         {/* ---- Desktop Nav ---- */}
@@ -182,16 +171,16 @@ export function Navbar({
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col items-start mr-1 text-[11px] leading-tight">
-                        <span className="font-semibold text-foreground truncate max-w-[80px]">{auth.name?.split(" ")[0]}</span>
-                        <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                      <span className="font-semibold text-foreground truncate max-w-[80px]">
+                        {auth.name?.split(" ")[0]}
+                      </span>
+                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
                     </div>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 p-1">
                   <div className="px-3 py-2 rounded-md bg-muted/50 mb-1">
-                    <p className="text-sm font-bold">
-                      {auth.name ?? "User"}
-                    </p>
+                    <p className="text-sm font-bold">{auth.name ?? "User"}</p>
                     {auth.email && (
                       <p className="text-xs text-muted-foreground truncate">
                         {auth.email}
@@ -243,9 +232,6 @@ export function Navbar({
             <>
               <Button asChild variant="ghost" size="sm">
                 <Link href="/login">Login</Link>
-              </Button>
-              <Button asChild size="sm">
-                <Link href="/login">Get Started</Link>
               </Button>
             </>
           )}

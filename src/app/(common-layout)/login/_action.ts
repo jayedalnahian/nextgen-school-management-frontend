@@ -13,6 +13,7 @@ import { ILoginResponse } from "@/types/auth.types";
 
 import { ILoginPayload, loginZodSchema } from "@/zod/auth.validation";
 import { redirect } from "next/navigation";
+import { forgotPassword } from "@/services/auth.service";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 export const loginAction = async (
@@ -43,17 +44,17 @@ export const loginAction = async (
     await setTokenInCookies("better-auth.session_token", token, 24 * 60 * 60); // 1 day in seconds
 
     if (needPasswordChange) {
+      await forgotPassword({ email });
       redirectTo = `/reset-password?email=${email}`;
     } else {
-      redirectTo =
+      const targetPath =
         redirectPath && isValidRedirectForRole(redirectPath, role as UserRole)
           ? redirectPath
           : getDefaultDashboardRoute(role as UserRole);
-
-      console.log(redirectTo, "redirectTo");
+      redirectTo = targetPath
     }
   } catch (error: any) {
-    console.log(error, "error");
+     console.log(error, "error");
 
     if (
       error &&
@@ -69,6 +70,5 @@ export const loginAction = async (
     }
   }
 
-
-    redirect(redirectTo || "/");
+  redirect(redirectTo || "/");
 };

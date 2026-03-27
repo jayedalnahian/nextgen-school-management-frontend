@@ -1,9 +1,10 @@
 "use client";
 
-import { forgotPasswordAction } from "@/app/(common-layout)/forgot-password/_action";
+import { forgotPasswordAction, resendVerificationEmailAction } from "@/app/(common-layout)/forgot-password/_action";
 import AppField from "@/components/shared/form/AppField";
 import AppSubmitButton from "@/components/shared/form/AppSubmitButton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { forgotPasswordSchema, IForgotPasswordPayload } from "@/zod/auth.validation";
 import { useForm } from "@tanstack/react-form";
@@ -13,9 +14,14 @@ import { useState } from "react";
 
 const ForgotPasswordForm = () => {
     const [serverError, setServerError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     const { mutateAsync, isPending } = useMutation({
         mutationFn: (payload: IForgotPasswordPayload) => forgotPasswordAction(payload),
+    });
+
+    const { mutateAsync: resendMutate, isPending: isResendPending } = useMutation({
+        mutationFn: (payload: IForgotPasswordPayload) => resendVerificationEmailAction(payload),
     });
 
     const form = useForm({
@@ -24,6 +30,7 @@ const ForgotPasswordForm = () => {
         },
         onSubmit: async ({ value }) => {
             setServerError(null);
+            setSuccessMessage(null);
             try {
                 const result = await mutateAsync(value);
 
@@ -32,13 +39,39 @@ const ForgotPasswordForm = () => {
                 }
             } catch (error: any) {
                 if (error && typeof error === "object" && "digest" in error && typeof error.digest === "string" && error.digest.startsWith("NEXT_REDIRECT")) {
-                    // Next.js redirect is handled by the framework
                     return;
                 }
                 setServerError(error.message || "An unexpected error occurred");
             }
         },
     });
+
+    const handleResendVerification = async () => {
+        setServerError(null);
+        setSuccessMessage(null);
+        
+        // Use form state to get current email value since it might not be submitted yet
+        const currentEmail = form.state.values.email;
+        
+        const validation = forgotPasswordSchema.safeParse({ email: currentEmail });
+        
+        if (!validation.success) {
+            setServerError("Please enter a valid email address first.");
+            return;
+        }
+
+        try {
+            const result = await resendMutate({ email: currentEmail });
+
+            if (result && result.success) {
+                setSuccessMessage("Verification email sent successfully!");
+            } else if (result && !result.success) {
+                setServerError(result.message || "Failed to resend verification email");
+            }
+        } catch (error: any) {
+            setServerError(error.message || "An unexpected error occurred");
+        }
+    };
 
     return (
         <Card className="mx-auto w-full max-w-md shadow-md">
@@ -78,6 +111,12 @@ const ForgotPasswordForm = () => {
                         </Alert>
                     )}
 
+                    {successMessage && (
+                        <Alert className="border-green-500 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400">
+                            <AlertDescription>{successMessage}</AlertDescription>
+                        </Alert>
+                    )}
+
                     <form.Subscribe
                         selector={(s) => [s.canSubmit, s.isSubmitting] as const}
                     >
@@ -92,14 +131,26 @@ const ForgotPasswordForm = () => {
                         )}
                     </form.Subscribe>
 
-                    <div className="mt-4 text-center text-sm">
-                        Remember your password?{" "}
-                        <Link
-                            href="/login"
-                            className="text-primary underline-offset-4 hover:underline"
+                    <div className="flex flex-col items-center gap-2 mt-4 text-sm">
+                        <Button 
+                            type="button" 
+                            variant="ghost" 
+                            className="text-primary hover:underline hover:bg-transparent"
+                            onClick={handleResendVerification}
+                            disabled={isResendPending}
                         >
-                            Log In
-                        </Link>
+                            {isResendPending ? "Sending..." : "Resend Verification Email"}
+                        </Button>
+                        
+                        <div>
+                            Remember your password?{" "}
+                            <Link
+                                href="/login"
+                                className="text-primary underline-offset-4 hover:underline"
+                            >
+                                Log In
+                            </Link>
+                        </div>
                     </div>
                 </form>
             </CardContent>

@@ -2,22 +2,18 @@ import { getDefaultDashboardRoute } from "@/lib/authUtils"
 import { getNavItemsByRole } from "@/lib/navItems"
 import { NavSection } from "@/types/dashboard.types"
 import DashboardSidebarContent from "./DashboardSidebarContent"
-import { getUserInfo } from "@/services/auth.service"
-import { redirect } from "next/navigation"
 
 
-const DashboardSidebar = async () => {
-  const userInfo = await getUserInfo()
-
-  if (!userInfo) {
-    redirect("/login")
-  }
-
-  const navItems : NavSection[] = getNavItemsByRole(userInfo.role)
+const DashboardSidebar = ({ userInfo }: { userInfo: any }) => {
+  const navItems: NavSection[] = getNavItemsByRole(userInfo.role)
   const dashboardHome = getDefaultDashboardRoute(userInfo.role)
 
   return (
-    <DashboardSidebarContent userInfo={userInfo} navItems={navItems} dashboardHome={dashboardHome}/>
+    <DashboardSidebarContent
+      userInfo={userInfo}
+      navItems={navItems}
+      dashboardHome={dashboardHome}
+    />
   )
 }
 

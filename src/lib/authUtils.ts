@@ -1,9 +1,9 @@
 export type UserRole = "SUPER_ADMIN" | "ADMIN" | "TEACHER" | "PARENT";
 
-export const authRoutes = [ "/login", "/register", "/forgot-password", "/email-verify", "/verify-otp", "/reset-password" ];
+export const authRoutes = [ "/login", "/forgot-password", "/email-verify", "/verify-otp", "/reset-password" ];
 
 export const isAuthRoute = (pathname : string) => {
-    return authRoutes.some((router : string) => router === pathname);
+    return authRoutes.some((route : string) => route === pathname);
 }
 
 export type RouteConfig = {
@@ -18,7 +18,7 @@ export const commonProtectedRoutes : RouteConfig = {
 
 export const adminProtectedRoutes : RouteConfig = {
     pattern: [/^\/admin/ ], 
-    exact : ['']
+    exact : []
 }
 
 export const teacherProtectedRoutes : RouteConfig = {

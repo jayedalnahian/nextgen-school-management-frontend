@@ -1,207 +1,225 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDefaultDashboardRoute, getRouteOwner, isAuthRoute, UserRole } from "./lib/authUtils";
+import {
+  getDefaultDashboardRoute,
+  getRouteOwner,
+  isAuthRoute,
+  UserRole,
+} from "./lib/authUtils";
 import { jwtUtils } from "./lib/jwtUtils";
 import { isTokenExpiringSoon } from "./lib/tokenUtils";
-import { getNewTokensWithRefreshToken, getUserInfo } from "./services/auth.service";
 
+import {
+  getNewTokensWithRefreshToken,
+  getUserInfo,
+} from "./services/auth.service";
+import { fetchForgotPassword } from "./services/auth-api";
 
 const JWT_ACCESS_SECRET = process.env.ACCESS_TOKEN_SECRET as string;
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
 
-async function refreshTokenMiddleware (refreshToken : string) : Promise<boolean> {
-    try {
-        const refresh = await getNewTokensWithRefreshToken(refreshToken);
-        if(!refresh){
-            return false;
-        }
-        return true;
-    } catch (error) {
-        console.error("Error refreshing token in middleware:", error);
-        return false;   
-    }
+function shouldRedirect(request: NextRequest, targetPath: string) {
+  const { pathname } = request.nextUrl;
+  return pathname !== targetPath;
 }
 
+async function refreshTokenMiddleware(
+  request: NextRequest,
+  refreshToken: string,
+): Promise<NextResponse | null> {
+  try {
+    const data = await getNewTokensWithRefreshToken(refreshToken);
+    if (!data) return null;
 
-export async function proxy (request : NextRequest) {
-   try {
+    const response = NextResponse.next();
 
-    
-       const { pathname } = request.nextUrl;
-       const accessToken = request.cookies.get("accessToken")?.value;
-       const refreshToken = request.cookies.get("refreshToken")?.value;
-       console.log(accessToken, "accessToken");
-       console.log(refreshToken, "refreshToken");
-       console.log(JWT_ACCESS_SECRET, "JWT_ACCESS_SECRET");
-       
-       const decodedAccessToken =  accessToken && jwtUtils.verifyToken(accessToken, JWT_ACCESS_SECRET).data;
-       console.log(decodedAccessToken, "decodedAccessToken");
+    // Sync cookies to the response so the browser receives them immediately
+    if (data.accessToken) {
+      response.cookies.set("accessToken", data.accessToken);
+    }
+    if (data.refreshToken) {
+      response.cookies.set("refreshToken", data.refreshToken);
+    }
+    if (data.token) {
+      response.cookies.set("better-auth.session_token", data.token, {
+        maxAge: 24 * 60 * 60,
+      });
+    }
 
-       const isValidAccessToken = accessToken && jwtUtils.verifyToken(accessToken, JWT_ACCESS_SECRET).success;
-       console.log(isValidAccessToken, "isValidAccessToken");
+    return response;
+  } catch (error) {
+    console.error("Error refreshing token in middleware:", error);
+    return null;
+  }
+}
 
-       let userRole: UserRole | null = null;
+export async function proxy(request: NextRequest) {
+  try {
+    const { pathname, searchParams } = request.nextUrl;
 
-       if(decodedAccessToken){
-            userRole = decodedAccessToken.role as UserRole;
-       }
+    // 1. Path Bypass: Immediately skip for static assets and internal Next.js routes
+    if (
+      pathname.startsWith("/_next") ||
+      pathname.startsWith("/api") ||
+      pathname.startsWith("/static") ||
+      pathname.includes(".") // Covers favicon.ico, images, etc.
+    ) {
+      return NextResponse.next();
+    }
 
-       const routerOwner = getRouteOwner(pathname);
+    const accessToken = request.cookies.get("accessToken")?.value;
+    const refreshToken = request.cookies.get("refreshToken")?.value;
+    const sessionToken = request.cookies.get("better-auth.session_token")?.value;
 
-       const unifySuperAdminAndAdminRole = userRole === "SUPER_ADMIN" ? "ADMIN" : userRole;
+    const pathWithQuery = `${pathname}${request.nextUrl.search}`;
 
-       userRole = unifySuperAdminAndAdminRole;
+    const decodedAccessToken =
+      accessToken && jwtUtils.verifyToken(accessToken, JWT_ACCESS_SECRET).data;
 
-       const isAuth = isAuthRoute(pathname);
+    const isValidAccessToken =
+      accessToken &&
+      jwtUtils.verifyToken(accessToken, JWT_ACCESS_SECRET).success;
 
+    let userRole: UserRole | null = null;
+    if (decodedAccessToken) {
+      userRole = decodedAccessToken.role as UserRole;
+    }
 
-    //    //proactively refresh token if refresh token exists and access token is expired or about to expire
-       if (isValidAccessToken && refreshToken && (await isTokenExpiringSoon(accessToken))){
-            const requestHeaders = new Headers(request.headers);
+    const routerOwner = getRouteOwner(pathname);
+    const isAuth = isAuthRoute(pathname);
 
-            const response = NextResponse.next({
-                request: {
-                    headers : requestHeaders
-            
-                },
-            })
+    // 2. Proactive Token Refresh
+    if (
+      accessToken &&
+      refreshToken &&
+      (await isTokenExpiringSoon(accessToken))
+    ) {
+      const refreshResponse = await refreshTokenMiddleware(
+        request,
+        refreshToken,
+      );
+      if (refreshResponse) {
+        return refreshResponse;
+      }
+    }
 
+    // 3. Authenticated Users on Auth Routes
+    if (isAuth && isValidAccessToken) {
+      if (pathname === "/verify-email" || pathname === "/reset-password") {
+        // Fall through to status checks
+      } else {
+        const dashboard = getDefaultDashboardRoute(userRole as UserRole);
+        if (shouldRedirect(request, dashboard)) {
+          return NextResponse.redirect(new URL(dashboard, request.url));
+        }
+        return NextResponse.next();
+      }
+    }
 
+    // 4. Handle Public Routes
+    if (routerOwner === null) {
+      return NextResponse.next();
+    }
+
+    // 5. Unauthenticated Access to Protected Routes
+    if (!isValidAccessToken) {
+      if (isAuth) return NextResponse.next();
+
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", pathWithQuery);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // 6. Role-based Access Control (RBAC)
+    const effectiveRole = userRole === "SUPER_ADMIN" ? "ADMIN" : userRole;
+    if (
+      routerOwner !== "COMMON" &&
+      routerOwner !== effectiveRole &&
+      userRole !== "SUPER_ADMIN"
+    ) {
+      const dashboard = getDefaultDashboardRoute(userRole as UserRole);
+      if (shouldRedirect(request, dashboard)) {
+        return NextResponse.redirect(new URL(dashboard, request.url));
+      }
+    }
+
+    // 7. Status Enforcement (Email Verification & Password Change)
+    if (isValidAccessToken) {
+      const allCookies = request.cookies
+        .getAll()
+        .map((c) => `${c.name}=${c.value}`)
+        .join("; ");
+
+      const userInfo = await getUserInfo(allCookies);
+
+      if (userInfo) {
+        // Email Verification Check
+        if (userInfo.emailVerified === false) {
+          if (pathname !== "/verify-email") {
+            const verifyEmailUrl = new URL("/verify-email", request.url);
+            verifyEmailUrl.searchParams.set("email", userInfo.email);
+            return NextResponse.redirect(verifyEmailUrl);
+          }
+          return NextResponse.next();
+        }
+
+        // Redirect away from verify-email if already verified
+        if (userInfo.emailVerified && pathname === "/verify-email") {
+          const dashboard = getDefaultDashboardRoute(userRole as UserRole);
+          return NextResponse.redirect(new URL(dashboard, request.url));
+        }
+
+        // Password Change Check
+        if (userInfo.needPasswordChange) {
+          if (pathname !== "/reset-password") {
             try {
-                const refreshed = await refreshTokenMiddleware(refreshToken);
-
-                if(refreshed){
-                    requestHeaders.set("x-token-refreshed", "1");
-                }
-
-                return NextResponse.next(
-                    {
-                        request: {
-                            headers : requestHeaders
-                        },
-                        headers : response.headers
-                    }
-                )
-            } catch (error) {
-                console.error("Error refreshing token:", error);
-
+              await fetchForgotPassword(userInfo.email);
+            } catch (e) {
+              console.error("Auto OTP send failed in middleware:", e);
             }
+            const resetPasswordUrl = new URL("/reset-password", request.url);
+            resetPasswordUrl.searchParams.set("email", userInfo.email);
+            return NextResponse.redirect(resetPasswordUrl);
+          }
+          return NextResponse.next();
+        }
 
-            return response;
-       }
-
-
-       // Rule - 1 : User is logged in (has access token) and trying to access auth route -> allow
-       if(isAuth && isValidAccessToken){
-        return NextResponse.redirect(new URL(getDefaultDashboardRoute(userRole as UserRole), request.url));
-       }
-
-       // Rule - 2 : User is trying to access reset password page
-       if(pathname === "/reset-password"){
-
-        const email = request.nextUrl.searchParams.get("email");
-
-            // case - 1 user has needPasswordChange true
-            //no need for case 1 if need password change is handled from change-password page
-            if(accessToken && email){
-                const userInfo = await getUserInfo();
-
-                if(userInfo.needPasswordChange){
-                    return NextResponse.next();
-                }else{
-                    return NextResponse.redirect(new URL(getDefaultDashboardRoute(userRole as UserRole), request.url));
-                }
-            }
-
-            // Case-2 user coming from forgot password
-
-            if(email){
-                return NextResponse.next();
-            }
-
-            const loginUrl = new URL("/login", request.url);
-            loginUrl.searchParams.set("redirect", pathname);
-            return NextResponse.redirect(loginUrl);
-       }
-
-       // Rule-3 User trying to access Public route -> allow
-       if(routerOwner === null){
-        return NextResponse.next();
-       }
-
-       // Rule - 4 User is Not logged in but trying to access protected route -> redirect to login
-       if(!accessToken || !isValidAccessToken){
+        // Redirect away from reset-password if not needed
+        if (
+          !userInfo.needPasswordChange &&
+          pathname === "/reset-password" &&
+          !searchParams.get("token")
+        ) {
+          const dashboard = getDefaultDashboardRoute(userRole as UserRole);
+          return NextResponse.redirect(new URL(dashboard, request.url));
+        }
+      } else {
         const loginUrl = new URL("/login", request.url);
-        loginUrl.searchParams.set("redirect", pathname);
-        return NextResponse.redirect(loginUrl);
-       }
+        if (!isAuth) {
+          loginUrl.searchParams.set("redirect", pathWithQuery);
+        }
+        const response = NextResponse.redirect(loginUrl);
+        response.cookies.delete("accessToken");
+        response.cookies.delete("refreshToken");
+        response.cookies.delete("better-auth.session_token");
+        return response;
+      }
+    }
 
-       //Rule - Enforcing user to stay in reset password or verify email page if their needPasswordChange or isEmailVerified flags are not satisfied respectively
-
-       if(accessToken){
-            const userInfo = await getUserInfo();
-
-            if(userInfo){
-                // need email verification scenario
-                if(userInfo.emailVerified === false){
-                    if(pathname !== "/verify-email"){
-                        const verifyEmailUrl = new URL("/verify-email", request.url);
-                        verifyEmailUrl.searchParams.set("email", userInfo.email);
-                        return NextResponse.redirect(verifyEmailUrl);
-                    }
-
-                    return NextResponse.next();
-                }
-
-                if(userInfo.emailVerified && pathname === "/verify-email"){
-                    return NextResponse.redirect(new URL(getDefaultDashboardRoute(userRole as UserRole), request.url));
-                }
-
-                // need password change scenario
-                if (userInfo.needPasswordChange){
-                    if(pathname !== "/reset-password"){
-                        const resetPasswordUrl = new URL("/reset-password", request.url);
-                        resetPasswordUrl.searchParams.set("email", userInfo.email);
-                        return NextResponse.redirect(resetPasswordUrl);
-                    }
-
-                    return NextResponse.next();
-                }
-
-                if(!userInfo.needPasswordChange && pathname === "/reset-password"){
-                    return NextResponse.redirect(new URL(getDefaultDashboardRoute(userRole as UserRole), request.url));
-                }
-            }
-       }
-
-       // Rule - 5 User trying to access Common protected route -> allow
-       if(routerOwner === "COMMON"){
-        return NextResponse.next();
-       }
-
-       //Rule-6 User trying to visit role based protected but doesn't have required role -> redirect to their default dashboard
-
-       if(routerOwner === "ADMIN" || routerOwner === "TEACHER" || routerOwner === "PARENT"){
-            if(routerOwner !== userRole){
-                return NextResponse.redirect(new URL(getDefaultDashboardRoute(userRole as UserRole), request.url));
-            }
-       }
-
-       return NextResponse.next();
-
-   } catch (error) {
-         console.error("Error in proxy middleware:", error);
-   }
+    return NextResponse.next();
+  } catch (error) {
+    console.error("Error in proxy middleware:", error);
+    return NextResponse.next();
+  }
 }
 
 export const config = {
-    matcher : [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - api (API routes)
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico, sitemap.xml, robots.txt (metadata files)
-         */
-        '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.well-known).*)',
-    ]
-}
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico, sitemap.xml, robots.txt (metadata files)
+     */
+    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.well-known).*)",
+  ],
+};
