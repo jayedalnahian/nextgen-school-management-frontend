@@ -6,6 +6,12 @@ export interface BaseProfile {
     image: string | null;
 }
 
+export enum UserStatus {
+  ACTIVE = "ACTIVE",
+  INACTIVE = "INACTIVE",
+  SUSPENDED = "SUSPENDED",
+}
+
 export interface TeacherProfile extends BaseProfile {
     phone: string | null;
     specialization: string | null;

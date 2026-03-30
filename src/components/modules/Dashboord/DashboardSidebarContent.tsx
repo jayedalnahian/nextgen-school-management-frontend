@@ -22,10 +22,10 @@ const DashboardSidebarContent = ({dashboardHome, navItems, userInfo} : Dashboard
   return (
     <div className="hidden md:flex h-full w-64 flex-col overflow-y-auto bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800">
       {/* Logo / Brand */}
-      <div className="flex h-16 items-center px-6 border-b border-white/10">
+      <div className="flex h-20 py-3 items-center px-6 border-b border-white/10">
         <Link href={dashboardHome} className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-            <span className="text-white font-bold text-sm">N</span>
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+            <span className="text-white font-bold text-base">N</span>
           </div>
           <span className="text-lg font-bold bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
             NextGen School

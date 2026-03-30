@@ -1,16 +1,12 @@
 "use client";
 
-import React from "react";
+import { Button } from "@/components/ui/button";
 import {
-  ColumnDef,
-  SortingState,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  OnChangeFn,
-} from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal, FileX2 } from "lucide-react";
-
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -19,258 +15,256 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PaginationMeta } from "@/types/api.types";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-
-import { DataTableSearch } from "./DataTableSearch";
-import {
-  DataTablePagination,
-  type PaginationMeta,
-} from "./DataTablePagination";
-import {
-  DataTableFilters,
-  type FilterConfig,
-  type ActiveFilters,
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  PaginationState,
+  SortingState,
+  useReactTable,
+} from "@tanstack/react-table";
+import { ArrowDown, ArrowUp, ArrowUpDown, MoreHorizontal } from "lucide-react";
+import { useEffect, useState } from "react";
+import DataTableFilters, {
+  DataTableFilterConfig,
+  DataTableFilterValue,
+  DataTableFilterValues,
 } from "./DataTableFilters";
+import DataTablePagination from "./DataTablePagination";
+import DataTableSearch from "./DataTableSearch";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-/** Action that appears in the row-action dropdown */
-export interface RowAction<TData> {
-  label: string;
-  icon?: React.ReactNode;
-  onClick: (row: TData) => void;
-  /** Optional: hide this action for certain rows */
-  hidden?: (row: TData) => boolean;
-  /** Render the item with destructive styles */
-  destructive?: boolean;
+interface DataTableActions<TData> {
+  onView?: (data: TData) => void;
+  onEdit?: (data: TData) => void;
+  onDelete?: (data: TData) => void;
 }
 
-export interface DataTableProps<TData, TValue> {
-  /** Column definitions (tanstack/react-table) */
-  columns: ColumnDef<TData, TValue>[];
-  /** Row data */
+interface DataTableProps<TData> {
   data: TData[];
-  /** Loading state (e.g. from Tanstack Query isFetching) */
+  columns: ColumnDef<TData>[];
+  actions?: DataTableActions<TData>;
+  toolbarAction?: React.ReactNode;
+  emptyMessage?: string;
   isLoading?: boolean;
-
-  // ---- Sorting ----
-  /** Controlled sorting state */
-  sorting?: SortingState;
-  /** Callback when sorting changes */
-  onSortingChange?: OnChangeFn<SortingState>;
-
-  // ---- Search ----
-  /** Enable the search bar */
-  searchable?: boolean;
-  searchValue?: string;
-  onSearch?: (value: string) => void;
-  searchPlaceholder?: string;
-
-  // ---- Filters ----
-  /** Filter configurations */
-  filters?: FilterConfig[];
-  activeFilters?: ActiveFilters;
-  onFilterChange?: (filters: ActiveFilters) => void;
-
-  // ---- Pagination ----
-  /** Pagination metadata from the API */
-  paginationMeta?: PaginationMeta;
-  onPageChange?: (page: number) => void;
-  onPageSizeChange?: (size: number) => void;
-
-  // ---- Row actions ----
-  rowActions?: RowAction<TData>[];
-
-  // ---- Empty state ----
-  emptyTitle?: string;
-  emptyDescription?: string;
-
-  // ---- Misc ----
-  className?: string;
+  sorting?: {
+    state: SortingState;
+    onSortingChange: (state: SortingState) => void;
+  };
+  pagination?: {
+    state: PaginationState;
+    onPaginationChange: (state: PaginationState) => void;
+  };
+  search?: {
+    initialValue?: string;
+    placeholder?: string;
+    debounceMs?: number;
+    onDebouncedChange: (value: string) => void;
+  };
+  filters?: {
+    configs: DataTableFilterConfig[];
+    values: DataTableFilterValues;
+    onFilterChange: (
+      filterId: string,
+      value: DataTableFilterValue | undefined,
+    ) => void;
+    onClearAll?: () => void;
+  };
+  meta?: PaginationMeta;
 }
 
-// ---------------------------------------------------------------------------
-// Sortable header helper
-// ---------------------------------------------------------------------------
-
-export function SortableHeader({
-  label,
-  column,
-}: {
-  label: string;
-  column: { toggleSorting: (desc?: boolean) => void; getIsSorted: () => false | "asc" | "desc" };
-}) {
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="-ml-3 h-8 gap-1 text-xs font-semibold uppercase tracking-wide"
-      onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-    >
-      {label}
-      <ArrowUpDown className="h-3.5 w-3.5" />
-    </Button>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main DataTable component
-// ---------------------------------------------------------------------------
-
-export function DataTable<TData, TValue>({
+const DataTable = <TData,>({
+  data = [] as TData[],
   columns,
-  data,
-  isLoading = false,
+  actions,
+  toolbarAction,
+  emptyMessage,
+  isLoading,
   sorting,
-  onSortingChange,
-  searchable = false,
-  searchValue = "",
-  onSearch,
-  searchPlaceholder,
-  filters = [],
-  activeFilters = {},
-  onFilterChange,
-  paginationMeta,
-  onPageChange,
-  onPageSizeChange,
-  rowActions,
-  emptyTitle = "No data available",
-  emptyDescription = "There are no records to display at the moment.",
-  className,
-}: DataTableProps<TData, TValue>) {
-  // Build final column list (append actions column if needed)
-  const finalColumns: ColumnDef<TData, TValue>[] = React.useMemo(() => {
-    if (!rowActions || rowActions.length === 0) return columns;
+  pagination,
+  search,
+  filters,
+  meta,
+}: DataTableProps<TData>) => {
+  const [hasHydrated, setHasHydrated] = useState(false);
 
-    const actionsCol: ColumnDef<TData, TValue> = {
-      id: "_actions",
-      header: () => <span className="sr-only">Actions</span>,
-      cell: ({ row }) => {
-        const visibleActions = rowActions.filter(
-          (a) => !a.hidden || !a.hidden(row.original),
-        );
-        if (visibleActions.length === 0) return null;
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
 
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreHorizontal className="h-4 w-4" />
-                <span className="sr-only">Open menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {visibleActions.map((action) => (
-                <DropdownMenuItem
-                  key={action.label}
-                  onClick={() => action.onClick(row.original)}
-                  className={cn(
-                    action.destructive && "text-destructive focus:text-destructive",
+  const hydratedIsLoading = hasHydrated ? Boolean(isLoading) : false;
+  const showLoadingOverlay = hydratedIsLoading;
+
+  const tableColumns: ColumnDef<TData>[] = actions
+    ? [
+        ...columns,
+
+        // Action column
+        {
+          id: "actions", // Unique id for the column
+          header: "Actions",
+          enableSorting: false,
+          cell: ({ row }) => {
+            const rowData = row.original;
+
+            return (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant={"ghost"} className="h-8 w-8 p-0">
+                    <span className="sr-only">Open Menu</span>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end">
+                  {actions.onView && (
+                    <DropdownMenuItem onClick={() => actions.onView?.(rowData)}>
+                      View
+                    </DropdownMenuItem>
                   )}
-                >
-                  {action.icon && (
-                    <span className="mr-2 h-4 w-4">{action.icon}</span>
+
+                  {actions.onEdit && (
+                    <DropdownMenuItem onClick={() => actions.onEdit?.(rowData)}>
+                      Edit
+                    </DropdownMenuItem>
                   )}
-                  {action.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
-      enableSorting: false,
-      enableHiding: false,
-    };
 
-    return [...columns, actionsCol];
-  }, [columns, rowActions]);
+                  {actions.onDelete && (
+                    <DropdownMenuItem
+                      onClick={() => actions.onDelete?.(rowData)}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            );
+          },
+        },
+      ]
+    : columns;
 
-  // Table instance
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table is intentionally used here and React Compiler already skips memoization for this hook.
   const table = useReactTable({
     data,
-    columns: finalColumns,
-    state: { sorting },
-    onSortingChange,
+    columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
-    manualSorting: true,
-    manualPagination: true,
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    manualSorting: !!sorting,
+    manualPagination: !!pagination,
+    pageCount: pagination ? Math.max(meta?.totalPages ?? 0, 0) : undefined,
+    state: {
+      ...(sorting ? { sorting: sorting.state } : {}),
+      ...(pagination ? { pagination: pagination.state } : {}),
+    },
+    onSortingChange: sorting
+      ? (updater) => {
+          const currentSortingState = sorting.state;
+
+          const nextSortingState =
+            typeof updater === "function"
+              ? updater(currentSortingState)
+              : updater;
+
+          sorting.onSortingChange(nextSortingState);
+        }
+      : undefined,
+    onPaginationChange: pagination
+      ? (updater) => {
+          const currentPaginationState = pagination.state;
+          const nextPaginationState =
+            typeof updater === "function"
+              ? updater(currentPaginationState)
+              : updater;
+
+          pagination.onPaginationChange(nextPaginationState);
+        }
+      : undefined,
   });
-
-  // ---- total column count for colSpan calculations ----
-  const totalCols = finalColumns.length;
-
   return (
-    <div className={cn("space-y-4", className)}>
-      {/* Toolbar: Search + Filters */}
-      {(searchable || filters.length > 0) && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          {searchable && onSearch && (
+    <div className="relative">
+      {showLoadingOverlay && (
+        <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <span className="text-sm text-muted-foreground">Loading...</span>
+          </div>
+        </div>
+      )}
+
+      {(search || filters || toolbarAction) && (
+        <div className="mb-4 flex flex-wrap items-start gap-3">
+          {search && (
             <DataTableSearch
-              value={searchValue}
-              onSearch={onSearch}
-              placeholder={searchPlaceholder}
+              initialValue={search.initialValue}
+              placeholder={search.placeholder}
+              debounceMs={search.debounceMs}
+              onDebouncedChange={search.onDebouncedChange}
+              isLoading={hydratedIsLoading}
             />
           )}
-          {filters.length > 0 && onFilterChange && (
+
+          {filters && (
             <DataTableFilters
-              filters={filters}
-              activeFilters={activeFilters}
-              onFilterChange={onFilterChange}
+              filters={filters.configs}
+              values={filters.values}
+              onFilterChange={filters.onFilterChange}
+              onClearAll={filters.onClearAll}
+              isLoading={hydratedIsLoading}
             />
+          )}
+
+          {toolbarAction && (
+            <div className="ml-auto shrink-0">{toolbarAction}</div>
           )}
         </div>
       )}
 
-      {/* Table */}
-      <div className="rounded-lg border bg-card">
+      {/* // Table */}
+      <div className="rounded-lg border">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
+            {table.getHeaderGroups().map((hg) => (
+              <TableRow key={hg.id}>
+                {hg.headers.map((header) => (
                   <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
+                    {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                      <Button
+                        variant={"ghost"}
+                        className="h-auto cursor-pointer p-0 font-semibold hover:bg-transparent hover:text-inherit focus-visible:ring-0"
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        {flexRender(
                           header.column.columnDef.header,
                           header.getContext(),
                         )}
+
+                        {header.column.getIsSorted() === "asc" ? (
+                          <ArrowUp className="ml-1 h-4 w-4" />
+                        ) : header.column.getIsSorted() === "desc" ? (
+                          <ArrowDown className="ml-1 h-4 w-4" />
+                        ) : (
+                          <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" />
+                        )}
+                      </Button>
+                    ) : (
+                      flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )
+                    )}
                   </TableHead>
                 ))}
               </TableRow>
             ))}
           </TableHeader>
-
           <TableBody>
-            {/* Loading state */}
-            {isLoading && (
-              <TableRow>
-                <TableCell colSpan={totalCols} className="h-32 text-center">
-                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Loading...
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-
-            {/* Data rows */}
-            {!isLoading &&
-              table.getRowModel().rows.length > 0 &&
+            {table.getRowModel()?.rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
+                <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(
@@ -280,32 +274,31 @@ export function DataTable<TData, TValue>({
                     </TableCell>
                   ))}
                 </TableRow>
-              ))}
-
-            {/* Empty state */}
-            {!isLoading && table.getRowModel().rows.length === 0 && (
+              ))
+            ) : (
               <TableRow>
-                <TableCell colSpan={totalCols} className="h-48">
-                  <div className="flex flex-col items-center justify-center gap-2 text-center text-muted-foreground">
-                    <FileX2 className="h-10 w-10 opacity-40" />
-                    <p className="text-base font-medium">{emptyTitle}</p>
-                    <p className="text-sm">{emptyDescription}</p>
-                  </div>
+                <TableCell
+                  colSpan={tableColumns.length}
+                  className="h-24 text-center"
+                >
+                  {emptyMessage || "No data available."}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
-      </div>
 
-      {/* Pagination */}
-      {paginationMeta && onPageChange && onPageSizeChange && (
-        <DataTablePagination
-          meta={paginationMeta}
-          onPageChange={onPageChange}
-          onPageSizeChange={onPageSizeChange}
-        />
-      )}
+        {pagination && (
+          <DataTablePagination
+            table={table}
+            totalPages={meta?.totalPages}
+            totalRows={meta?.total}
+            isLoading={hydratedIsLoading}
+          />
+        )}
+      </div>
     </div>
   );
-}
+};
+
+export default DataTable;

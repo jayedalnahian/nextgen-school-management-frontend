@@ -1,181 +1,259 @@
 "use client";
 
-import React from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { Table as TanstackTable } from "@tanstack/react-table";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo, useState } from "react";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+type PaginationToken = number | "start-ellipsis" | "end-ellipsis";
 
-export interface PaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
+const DEFAULT_PAGE_SIZES = [1, 10, 20, 50, 100] as const;
+
+const isDefaultPageSize = (value: number) => {
+  return DEFAULT_PAGE_SIZES.includes(value as (typeof DEFAULT_PAGE_SIZES)[number]);
+};
+
+const getPaginationItems = (
+  currentPage: number,
+  totalPages: number,
+): PaginationToken[] => {
+  if (totalPages <= 0) {
+    return [];
+  }
+
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 5) {
+    return [1, 2, 3, 4, 5, "end-ellipsis", totalPages];
+  }
+
+  if (currentPage >= totalPages - 4) {
+    return [
+      1,
+      "start-ellipsis",
+      totalPages - 4,
+      totalPages - 3,
+      totalPages - 2,
+      totalPages - 1,
+      totalPages,
+    ];
+  }
+
+  return [
+    1,
+    "start-ellipsis",
+    currentPage - 2,
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+    currentPage + 2,
+    "end-ellipsis",
+    totalPages,
+  ];
+};
+
+interface DataTablePaginationProps<TData> {
+  table: TanstackTable<TData>;
+  totalRows?: number;
+  totalPages?: number;
+  isLoading?: boolean;
 }
 
-interface DataTablePaginationProps {
-  /** Pagination metadata from the API */
-  meta: PaginationMeta;
-  /** Callback when the page changes */
-  onPageChange: (page: number) => void;
-  /** Callback when rows-per-page changes */
-  onPageSizeChange: (size: number) => void;
-  /** Available page-size options */
-  pageSizeOptions?: number[];
-  /** Extra classes on the outer wrapper */
-  className?: string;
-}
+const DataTablePagination = <TData,>({
+  table,
+  totalRows,
+  totalPages,
+  isLoading,
+}: DataTablePaginationProps<TData>) => {
+  const pagination = table.getState().pagination;
+  const pageSize = pagination.pageSize;
+  const currentPage = pagination.pageIndex + 1;
+  const computedTotalPages = totalPages ?? table.getPageCount();
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+  const [isCustomMode, setIsCustomMode] = useState<boolean>(!isDefaultPageSize(pageSize));
+  const [customPageSize, setCustomPageSize] = useState<string>(String(pageSize));
 
-export function DataTablePagination({
-  meta,
-  onPageChange,
-  onPageSizeChange,
-  pageSizeOptions = [10, 20, 50, 100],
-  className,
-}: DataTablePaginationProps) {
-  const { page, limit, total, totalPages } = meta;
+  const isCurrentPageSizeCustom = !isDefaultPageSize(pageSize);
+  const showCustomInput = isCustomMode || isCurrentPageSizeCustom;
+  const pageSizeSelectValue = showCustomInput ? "custom" : String(pageSize);
 
-  const [goToPage, setGoToPage] = React.useState("");
+  const paginationItems = useMemo(
+    () => getPaginationItems(currentPage, computedTotalPages),
+    [currentPage, computedTotalPages],
+  );
 
-  const canGoPrev = page > 1;
-  const canGoNext = page < totalPages;
-
-  const handleGoToPage = (e: React.FormEvent) => {
-    e.preventDefault();
-    const target = Number(goToPage);
-    if (!Number.isNaN(target) && target >= 1 && target <= totalPages) {
-      onPageChange(target);
-      setGoToPage("");
+  const applyCustomPageSize = () => {
+    const parsed = Number(customPageSize);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      return;
     }
+
+    setIsCustomMode(!isDefaultPageSize(parsed));
+
+    table.setPagination({
+      pageIndex: 0,
+      pageSize: parsed,
+    });
   };
 
+  const onPageSizeSelect = (value: string) => {
+    if (value === "custom") {
+      setIsCustomMode(true);
+      setCustomPageSize(String(pageSize));
+      return;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      return;
+    }
+
+    setIsCustomMode(false);
+    setCustomPageSize(String(parsed));
+
+    table.setPagination({
+      pageIndex: 0,
+      pageSize: parsed,
+    });
+  };
+
+  const jumpBackwardTarget = Math.max(1, currentPage - 5);
+  const jumpForwardTarget = Math.min(computedTotalPages, currentPage + 5);
+
+  if (computedTotalPages <= 0) {
+    return null;
+  }
+
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-4",
-        className,
-      )}
-    >
-      {/* Left: Meta info */}
-      <div className="text-sm text-muted-foreground">
-        Showing{" "}
-        <span className="font-medium text-foreground">
-          {Math.min((page - 1) * limit + 1, total)}
-        </span>
-        –
-        <span className="font-medium text-foreground">
-          {Math.min(page * limit, total)}
-        </span>{" "}
-        of <span className="font-medium text-foreground">{total}</span> results
-        &nbsp;·&nbsp; Page{" "}
-        <span className="font-medium text-foreground">{page}</span> of{" "}
-        <span className="font-medium text-foreground">{totalPages}</span>
+    <div className="flex flex-col gap-3 border-t px-4 py-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage() || isLoading}
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Prev
+        </Button>
+
+        {paginationItems.map((item) => {
+          if (item === "start-ellipsis") {
+            return (
+              <Button
+                key="start-ellipsis"
+                variant="ghost"
+                size="sm"
+                className="min-w-9 px-2"
+                onClick={() => table.setPageIndex(jumpBackwardTarget - 1)}
+                disabled={isLoading}
+              >
+                ...
+              </Button>
+            );
+          }
+
+          if (item === "end-ellipsis") {
+            return (
+              <Button
+                key="end-ellipsis"
+                variant="ghost"
+                size="sm"
+                className="min-w-9 px-2"
+                onClick={() => table.setPageIndex(jumpForwardTarget - 1)}
+                disabled={isLoading}
+              >
+                ...
+              </Button>
+            );
+          }
+
+          const isActive = item === currentPage;
+          return (
+            <Button
+              key={item}
+              variant={isActive ? "default" : "outline"}
+              size="sm"
+              className={cn("min-w-9", isActive && "pointer-events-none")}
+              onClick={() => table.setPageIndex(item - 1)}
+              disabled={isLoading}
+            >
+              {item}
+            </Button>
+          );
+        })}
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage() || isLoading}
+        >
+          Next
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
 
-      {/* Right: Controls */}
-      <div className="flex items-center gap-4">
-        {/* Rows per page */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">
-            Rows
-          </span>
-          <Select
-            value={String(limit)}
-            onValueChange={(v) => onPageSizeChange(Number(v))}
-          >
-            <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {pageSizeOptions.map((size) => (
-                <SelectItem key={size} value={String(size)}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        <Select value={pageSizeSelectValue} onValueChange={onPageSizeSelect}>
+          <SelectTrigger className="w-24" aria-label="Rows per page">
+            <SelectValue placeholder="Limit" />
+          </SelectTrigger>
 
-        {/* Go-to-page */}
-        <form onSubmit={handleGoToPage} className="flex items-center gap-1.5">
-          <Input
-            type="number"
-            min={1}
-            max={totalPages}
-            value={goToPage}
-            onChange={(e) => setGoToPage(e.target.value)}
-            placeholder="Go to"
-            className="h-8 w-[72px] text-sm"
-          />
-          <Button type="submit" variant="outline" size="sm" className="h-8">
-            Go
-          </Button>
-        </form>
+          <SelectContent>
+            {DEFAULT_PAGE_SIZES.map((size) => (
+              <SelectItem key={size} value={String(size)}>
+                {size}
+              </SelectItem>
+            ))}
+            <SelectItem value="custom">Custom</SelectItem>
+          </SelectContent>
+        </Select>
+        <span>rows</span>
 
-        {/* Navigation buttons */}
-        <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            disabled={!canGoPrev}
-            onClick={() => onPageChange(1)}
-            aria-label="First page"
-          >
-            <ChevronsLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            disabled={!canGoPrev}
-            onClick={() => onPageChange(page - 1)}
-            aria-label="Previous page"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            disabled={!canGoNext}
-            onClick={() => onPageChange(page + 1)}
-            aria-label="Next page"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            disabled={!canGoNext}
-            onClick={() => onPageChange(totalPages)}
-            aria-label="Last page"
-          >
-            <ChevronsRight className="h-4 w-4" />
-          </Button>
-        </div>
+        {showCustomInput && (
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={1}
+              className="h-9 w-24"
+              value={customPageSize}
+              onChange={(event) => setCustomPageSize(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  applyCustomPageSize();
+                }
+              }}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={applyCustomPageSize}
+              disabled={isLoading}
+            >
+              Apply
+            </Button>
+          </div>
+        )}
+
+        <span className="ml-2">
+          Total {totalRows ?? 0} items, {computedTotalPages} pages
+        </span>
       </div>
     </div>
   );
-}
+};
+
+export default DataTablePagination;
