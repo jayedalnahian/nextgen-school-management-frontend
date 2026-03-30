@@ -5,7 +5,7 @@ import {
   DataTableFilterValues,
   DataTableRangeValue,
   RangeOperator,
-} from "@/components/shared/table/DataTableFilters";
+} from "@/components/shared/data-table/DataTableFilters";
 import { useCallback, useMemo } from "react";
 import { UpdateParamsFn } from "./useServerManagedDataTable";
 import { ReadonlyURLSearchParams } from "next/navigation";

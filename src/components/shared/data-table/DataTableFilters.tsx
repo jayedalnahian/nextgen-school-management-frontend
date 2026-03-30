@@ -10,13 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { cn } from "@/lib/utils";
 import { Filter, X } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -181,26 +175,51 @@ const SingleSelectFilterControl = ({
   isLoading?: boolean;
   onFilterChange: (filterId: string, value: DataTableFilterValue | undefined) => void;
 }) => {
+  const allOptions = [
+    { label: "All", value: "" },
+    ...filter.options,
+  ];
+
   return (
-    <div className="space-y-3">
-      <Select
-        value={value || "all"}
-        onValueChange={(nextValue) => {
-          onFilterChange(filter.id, nextValue === "all" ? undefined : nextValue);
-        }}
-      >
-        <SelectTrigger disabled={isLoading}>
-          <SelectValue placeholder={filter.label} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All</SelectItem>
-          {filter.options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <div className="max-h-52 space-y-0.5 overflow-auto">
+      {allOptions.map((option) => {
+        const isSelected = option.value === "" ? !value : value === option.value;
+
+        return (
+          <button
+            key={option.value || "__all__"}
+            type="button"
+            disabled={isLoading}
+            onClick={() => {
+              onFilterChange(filter.id, option.value || undefined);
+            }}
+            className={cn(
+              "flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors",
+              "hover:bg-accent hover:text-accent-foreground",
+              "disabled:pointer-events-none disabled:opacity-50",
+              isSelected && "bg-accent font-medium text-accent-foreground",
+            )}
+          >
+            <span>{option.label}</span>
+            {isSelected && (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="shrink-0"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 };

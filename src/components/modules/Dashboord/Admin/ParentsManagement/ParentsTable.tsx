@@ -1,10 +1,10 @@
 "use client";
 
 import DataTable from "@/components/shared/data-table/DataTable";
-import { getTeachers } from "@/services/teacher.service";
-import { ITeacher } from "@/types/teacher.types";
+import { getParents } from "@/services/parent.service";
+import { IParent } from "@/types/parent.types";
 import { useQuery } from "@tanstack/react-query";
-import { teachersColumns } from "./TeachersColumn";
+import { parentsColumns } from "./ParentsColumn";
 import { useServerManagedDataTable } from "@/hooks/useServerManagedDataTable";
 import { useSearchParams } from "next/navigation";
 import { useServerManagedDataTableSearch } from "@/hooks/useServerManagedDataTableSearch";
@@ -15,7 +15,7 @@ import { DataTableFilterConfig } from "@/components/shared/data-table/DataTableF
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
 
-const TeachersTable = ({
+const ParentsTable = ({
   initialQueryString,
 }: {
   initialQueryString: string;
@@ -57,60 +57,58 @@ const TeachersTable = ({
       definitions: filterDefinitions,
       updateParams,
     });
-  const handleView = (teacher: ITeacher) => {
-    console.log(teacher);
+
+  const handleView = (parent: IParent) => {
+    console.log(parent);
   };
 
   const filterConfigs = useMemo<DataTableFilterConfig[]>(() => {
-      return [
-        {
-          id: "status",
-          label: "Status",
-          type: "single-select",
-          options: [
-            { label: "Active", value: "ACTIVE" },
-            { label: "Inactive", value: "INACTIVE" },
-            { label: "Suspended", value: "SUSPENDED" },
-          ], 
-        },
-        {
-          id: "emailVerified",
-          label: "Verified",
-          type: "single-select",
-          options: [
-            { label: "Verified", value: "true" },
-            { label: "Not Verified", value: "false" },
-          ], 
-        },
-      ];
-    }, []);
+    return [
+      {
+        id: "status",
+        label: "Status",
+        type: "single-select",
+        options: [
+          { label: "Active", value: "ACTIVE" },
+          { label: "Inactive", value: "INACTIVE" },
+          { label: "Suspended", value: "SUSPENDED" },
+        ],
+      },
+      {
+        id: "emailVerified",
+        label: "Verified",
+        type: "single-select",
+        options: [
+          { label: "Verified", value: "true" },
+          { label: "Not Verified", value: "false" },
+        ],
+      },
+    ];
+  }, []);
 
-
-  const handleEdit = (teacher: ITeacher) => {
-    console.log(teacher);
+  const handleEdit = (parent: IParent) => {
+    console.log(parent);
   };
 
-  const handleDelete = (teacher: ITeacher) => {
-    console.log(teacher);
+  const handleDelete = (parent: IParent) => {
+    console.log(parent);
   };
 
-  const { data: teacherDataResponse, isLoading } = useQuery({
-    queryKey: ["teachers", queryString],
-    queryFn: () => getTeachers(queryString),
+  const { data: parentDataResponse, isLoading } = useQuery({
+    queryKey: ["parents", queryString],
+    queryFn: () => getParents(queryString),
   });
 
-  
-
-  const { data: teachers } = teacherDataResponse || { data: [] };
+  const { data: parents } = parentDataResponse || { data: [] };
 
   return (
     <div>
       <DataTable
-        data={teachers}
-        meta={teacherDataResponse?.meta}
-        columns={teachersColumns}
+        data={parents}
+        meta={parentDataResponse?.meta}
+        columns={parentsColumns}
         isLoading={isLoading}
-        emptyMessage="No teacher found."
+        emptyMessage="No parent found."
         sorting={{
           state: optimisticSortingState,
           onSortingChange: handleSortingChange,
@@ -121,24 +119,24 @@ const TeachersTable = ({
         }}
         search={{
           initialValue: searchTermFromUrl,
-          placeholder: "Search teacher by name, email...",
+          placeholder: "Search parent by name, email, phone, address, stripe ID...",
           debounceMs: 700,
           onDebouncedChange: handleDebouncedSearchChange,
         }}
         filters={{
-            configs: filterConfigs,
-            values: filterValues,
-            onFilterChange: handleFilterChange,
-            onClearAll: clearAllFilters,
-          }}
+          configs: filterConfigs,
+          values: filterValues,
+          onFilterChange: handleFilterChange,
+          onClearAll: clearAllFilters,
+        }}
         actions={{
           onEdit: handleEdit,
           onView: handleView,
           onDelete: handleDelete,
         }}
-      ></DataTable>
+      />
     </div>
   );
 };
 
-export default TeachersTable;
+export default ParentsTable;
