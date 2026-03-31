@@ -10,6 +10,8 @@ import {
   fetchResetPassword,
 } from "./auth-api";
 import { cookies } from "next/headers";
+import { RegisterPayload } from "@/types/auth.types";
+import { httpClient } from "@/lib/axios/httpClient";
 
 const BASE_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 if (!BASE_API_URL) {
@@ -206,4 +208,61 @@ export async function getUserInfo(customCookieHeader?: string) {
   const { data } = await res.json();
 
   return data;
+}
+
+export async function registerUser(payload: RegisterPayload) {
+  try {
+    const formData = new FormData();
+
+    // Append base fields
+    formData.append("email", payload.email);
+    formData.append("password", payload.password);
+    formData.append("name", payload.name);
+    formData.append("phone", payload.phone);
+    formData.append("role", payload.role);
+
+    // Append file if provided
+    if (payload.image) {
+      formData.append("file", payload.image);
+    }
+
+    // Append role-specific fields
+    if (payload.role === "PARENT") {
+      formData.append("address", payload.address);
+      formData.append("occupation", payload.occupation);
+    } else if (payload.role === "TEACHER") {
+      formData.append("specialization", payload.specialization);
+      formData.append("qualification", payload.qualification);
+      formData.append("joiningDate", payload.joiningDate);
+    } else if (payload.role === "ADMIN") {
+      formData.append("designation", payload.designation);
+      formData.append("joiningDate", payload.joiningDate);
+    }
+
+    const result = await httpClient.post("/auth/register", formData, {
+      headers: {
+        // Let browser set Content-Type with multipart boundary for FormData
+      },
+    });
+
+    if (!result.success) {
+      return {
+        success: false,
+        message: result.message || "Failed to register user",
+        error: result,
+      };
+    }
+
+    return {
+      success: true,
+      data: result.data,
+      message: result.message || "User registered successfully",
+    };
+  } catch (error: any) {
+    console.error("Register user error:", error);
+    return {
+      success: false,
+      message: error.message || "An unexpected error occurred",
+    };
+  }
 }

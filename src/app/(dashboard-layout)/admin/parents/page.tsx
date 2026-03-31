@@ -1,4 +1,5 @@
 import ParentsTable from "@/components/modules/Dashboord/Admin/ParentsManagement/ParentsTable";
+import { UserRegisterModal } from "@/components/shared/UserRegisterModal";
 import { getParents } from "@/services/parent.service";
 import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
 
@@ -37,6 +38,10 @@ const AdminParentsPage = async ({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold">Parents</h1>
+        <UserRegisterModal defaultRole="PARENT" allowRoleChange={false} buttonLabel="Add Parent" />
+      </div>
       <ParentsTable initialQueryString={queryString} />
     </HydrationBoundary>
   );

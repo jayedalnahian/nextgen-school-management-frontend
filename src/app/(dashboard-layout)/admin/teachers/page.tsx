@@ -1,7 +1,7 @@
 import TeachersTable from "@/components/modules/Dashboord/Admin/TeachersManagement/TeachersTable";
+import { UserRegisterModal } from "@/components/shared/UserRegisterModal";
 import { getTeachers } from "@/services/teacher.service";
 import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
-import { object } from "zod";
 
 const AdminTeachersPage = async ({
   searchParams,
@@ -37,7 +37,11 @@ const AdminTeachersPage = async ({
   });
 
   return (
- <HydrationBoundary state={dehydrate(queryClient)}>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold">Teachers</h1>
+        <UserRegisterModal defaultRole="TEACHER" allowRoleChange={false} buttonLabel="Add Teacher" />
+      </div>
       <TeachersTable initialQueryString={queryString}/>
     </HydrationBoundary>
   );
