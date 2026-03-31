@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import DataTable from "@/components/shared/data-table/DataTable";
 import { getAdmins } from "@/services/admin.service";
 import { IAdmin } from "@/types/admin.types";
@@ -11,6 +12,7 @@ import { useServerManagedDataTableSearch } from "@/hooks/useServerManagedDataTab
 import { useServerManagedDataTableFilters, serverManagedFilter, ServerManagedFilterDefinition } from "@/hooks/useServerManagedDataTableFilters";
 import { useMemo } from "react";
 import { DataTableFilterConfig } from "@/components/shared/data-table/DataTableFilters";
+import { UserEditModal } from "@/components/shared/UserEditModal";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
@@ -21,6 +23,8 @@ const AdminsTable = ({
   initialQueryString: string;
 }) => {
   const searchParams = useSearchParams();
+  const [editingUser, setEditingUser] = useState<IAdmin | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const {
     queryStringFromUrl,
@@ -62,6 +66,20 @@ const AdminsTable = ({
     console.log(admin);
   };
 
+  const handleEdit = (admin: IAdmin) => {
+    setEditingUser(admin);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingUser(null);
+  };
+
+  const handleDelete = (admin: IAdmin) => {
+    console.log(admin);
+  };
+
   const filterConfigs = useMemo<DataTableFilterConfig[]>(() => {
     return [
       {
@@ -86,14 +104,6 @@ const AdminsTable = ({
     ];
   }, []);
 
-  const handleEdit = (admin: IAdmin) => {
-    console.log(admin);
-  };
-
-  const handleDelete = (admin: IAdmin) => {
-    console.log(admin);
-  };
-
   const { data: adminDataResponse, isLoading } = useQuery({
     queryKey: ["admins", queryString],
     queryFn: () => getAdmins(queryString),
@@ -101,8 +111,31 @@ const AdminsTable = ({
 
   const { data: admins } = adminDataResponse || { data: [] };
 
+  // Convert IAdmin to IUser format for UserEditModal
+  const userForEditModal = editingUser
+    ? {
+        id: editingUser.id,
+        email: editingUser.email,
+        name: editingUser.name,
+        image: editingUser.image,
+        role: editingUser.role as "ADMIN" | "TEACHER" | "PARENT" | "SUPER_ADMIN",
+        status: editingUser.status,
+        admin: editingUser.admin,
+      }
+    : null;
+
   return (
     <div>
+      {userForEditModal && (
+        <UserEditModal
+          user={userForEditModal}
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          onSuccess={() => {
+            handleCloseEditModal();
+          }}
+        />
+      )}
       <DataTable
         data={admins}
         meta={adminDataResponse?.meta}

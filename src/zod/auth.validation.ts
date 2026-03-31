@@ -78,6 +78,29 @@ export const resetPasswordSchema = z.object({
 
 export type IResetPasswordPayload = z.infer<typeof resetPasswordSchema>;
 
+// User update schema
+export const updateUserSchema = z
+  .object({
+    name: z.string().optional(),
+    image: z.string().optional(),
+    role: z.enum(["ADMIN", "TEACHER", "PARENT", "SUPER_ADMIN"]).optional(),
+    status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]).optional(),
+    // Admin fields
+    designation: z.string().optional(),
+    phone: z.string().optional(),
+    joiningDate: z.string().optional(),
+    // Teacher fields
+    specialization: z.string().optional(),
+    qualification: z.string().optional(),
+    bio: z.string().optional(),
+    // Parent fields
+    address: z.string().optional(),
+    occupation: z.string().optional(),
+  })
+  .partial();
+
+export type IUpdateUserPayload = z.infer<typeof updateUserSchema>;
+
 // Student registration schema
 export const registerStudentSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),

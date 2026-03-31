@@ -266,3 +266,32 @@ export async function registerUser(payload: RegisterPayload) {
     };
   }
 }
+
+export async function updateUser(
+  id: string,
+  payload: Omit<import("@/zod/auth.validation").IUpdateUserPayload, "id">
+) {
+  try {
+    const result = await httpClient.patch(`/users/${id}`, payload);
+
+    if (!result.success) {
+      return {
+        success: false,
+        message: result.message || "Failed to update user",
+        error: result,
+      };
+    }
+
+    return {
+      success: true,
+      data: result.data,
+      message: result.message || "User updated successfully",
+    };
+  } catch (error: any) {
+    console.error("Update user error:", error);
+    return {
+      success: false,
+      message: error.message || "An unexpected error occurred",
+    };
+  }
+}

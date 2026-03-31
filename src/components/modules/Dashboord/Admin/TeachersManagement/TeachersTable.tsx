@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import DataTable from "@/components/shared/data-table/DataTable";
 import { getTeachers } from "@/services/teacher.service";
 import { ITeacher } from "@/types/teacher.types";
@@ -11,6 +12,7 @@ import { useServerManagedDataTableSearch } from "@/hooks/useServerManagedDataTab
 import { useServerManagedDataTableFilters, serverManagedFilter, ServerManagedFilterDefinition } from "@/hooks/useServerManagedDataTableFilters";
 import { useMemo } from "react";
 import { DataTableFilterConfig } from "@/components/shared/data-table/DataTableFilters";
+import { UserEditModal } from "@/components/shared/UserEditModal";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
@@ -21,6 +23,8 @@ const TeachersTable = ({
   initialQueryString: string;
 }) => {
   const searchParams = useSearchParams();
+  const [editingUser, setEditingUser] = useState<ITeacher | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const {
     queryStringFromUrl,
@@ -57,54 +61,81 @@ const TeachersTable = ({
       definitions: filterDefinitions,
       updateParams,
     });
+
   const handleView = (teacher: ITeacher) => {
     console.log(teacher);
   };
 
-  const filterConfigs = useMemo<DataTableFilterConfig[]>(() => {
-      return [
-        {
-          id: "status",
-          label: "Status",
-          type: "single-select",
-          options: [
-            { label: "Active", value: "ACTIVE" },
-            { label: "Inactive", value: "INACTIVE" },
-            { label: "Suspended", value: "SUSPENDED" },
-          ], 
-        },
-        {
-          id: "emailVerified",
-          label: "Verified",
-          type: "single-select",
-          options: [
-            { label: "Verified", value: "true" },
-            { label: "Not Verified", value: "false" },
-          ], 
-        },
-      ];
-    }, []);
-
-
   const handleEdit = (teacher: ITeacher) => {
-    console.log(teacher);
+    setEditingUser(teacher);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingUser(null);
   };
 
   const handleDelete = (teacher: ITeacher) => {
     console.log(teacher);
   };
 
+  const filterConfigs = useMemo<DataTableFilterConfig[]>(() => {
+    return [
+      {
+        id: "status",
+        label: "Status",
+        type: "single-select",
+        options: [
+          { label: "Active", value: "ACTIVE" },
+          { label: "Inactive", value: "INACTIVE" },
+          { label: "Suspended", value: "SUSPENDED" },
+        ],
+      },
+      {
+        id: "emailVerified",
+        label: "Verified",
+        type: "single-select",
+        options: [
+          { label: "Verified", value: "true" },
+          { label: "Not Verified", value: "false" },
+        ],
+      },
+    ];
+  }, []);
+
   const { data: teacherDataResponse, isLoading } = useQuery({
     queryKey: ["teachers", queryString],
     queryFn: () => getTeachers(queryString),
   });
 
-  
-
   const { data: teachers } = teacherDataResponse || { data: [] };
+
+  // Convert ITeacher to IUser format for UserEditModal
+  const userForEditModal = editingUser
+    ? {
+        id: editingUser.id,
+        email: editingUser.email,
+        name: editingUser.name,
+        image: editingUser.image,
+        role: editingUser.role as "ADMIN" | "TEACHER" | "PARENT" | "SUPER_ADMIN",
+        status: editingUser.status,
+        teacher: editingUser.teacher,
+      }
+    : null;
 
   return (
     <div>
+      {userForEditModal && (
+        <UserEditModal
+          user={userForEditModal}
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          onSuccess={() => {
+            handleCloseEditModal();
+          }}
+        />
+      )}
       <DataTable
         data={teachers}
         meta={teacherDataResponse?.meta}
@@ -126,17 +157,17 @@ const TeachersTable = ({
           onDebouncedChange: handleDebouncedSearchChange,
         }}
         filters={{
-            configs: filterConfigs,
-            values: filterValues,
-            onFilterChange: handleFilterChange,
-            onClearAll: clearAllFilters,
-          }}
+          configs: filterConfigs,
+          values: filterValues,
+          onFilterChange: handleFilterChange,
+          onClearAll: clearAllFilters,
+        }}
         actions={{
           onEdit: handleEdit,
           onView: handleView,
           onDelete: handleDelete,
         }}
-      ></DataTable>
+      />
     </div>
   );
 };

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import DataTable from "@/components/shared/data-table/DataTable";
 import { getParents } from "@/services/parent.service";
 import { IParent } from "@/types/parent.types";
@@ -11,6 +12,7 @@ import { useServerManagedDataTableSearch } from "@/hooks/useServerManagedDataTab
 import { useServerManagedDataTableFilters, serverManagedFilter, ServerManagedFilterDefinition } from "@/hooks/useServerManagedDataTableFilters";
 import { useMemo } from "react";
 import { DataTableFilterConfig } from "@/components/shared/data-table/DataTableFilters";
+import { UserEditModal } from "@/components/shared/UserEditModal";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
@@ -21,6 +23,8 @@ const ParentsTable = ({
   initialQueryString: string;
 }) => {
   const searchParams = useSearchParams();
+  const [editingUser, setEditingUser] = useState<IParent | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const {
     queryStringFromUrl,
@@ -62,6 +66,20 @@ const ParentsTable = ({
     console.log(parent);
   };
 
+  const handleEdit = (parent: IParent) => {
+    setEditingUser(parent);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingUser(null);
+  };
+
+  const handleDelete = (parent: IParent) => {
+    console.log(parent);
+  };
+
   const filterConfigs = useMemo<DataTableFilterConfig[]>(() => {
     return [
       {
@@ -86,14 +104,6 @@ const ParentsTable = ({
     ];
   }, []);
 
-  const handleEdit = (parent: IParent) => {
-    console.log(parent);
-  };
-
-  const handleDelete = (parent: IParent) => {
-    console.log(parent);
-  };
-
   const { data: parentDataResponse, isLoading } = useQuery({
     queryKey: ["parents", queryString],
     queryFn: () => getParents(queryString),
@@ -101,8 +111,31 @@ const ParentsTable = ({
 
   const { data: parents } = parentDataResponse || { data: [] };
 
+  // Convert IParent to IUser format for UserEditModal
+  const userForEditModal = editingUser
+    ? {
+        id: editingUser.id,
+        email: editingUser.email,
+        name: editingUser.name,
+        image: editingUser.image,
+        role: editingUser.role as "ADMIN" | "TEACHER" | "PARENT" | "SUPER_ADMIN",
+        status: editingUser.status,
+        parent: editingUser.parent,
+      }
+    : null;
+
   return (
     <div>
+      {userForEditModal && (
+        <UserEditModal
+          user={userForEditModal}
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          onSuccess={() => {
+            handleCloseEditModal();
+          }}
+        />
+      )}
       <DataTable
         data={parents}
         meta={parentDataResponse?.meta}
