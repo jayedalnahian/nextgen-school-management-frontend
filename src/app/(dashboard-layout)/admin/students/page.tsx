@@ -1,4 +1,5 @@
 import StudentsTable from "@/components/modules/Dashboord/Admin/StudentsManagement/StudentsTable";
+import { StudentRegisterModal } from "@/components/shared/StudentRegisterModal";
 import { getStudents } from "@/services/student.service";
 import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
 
@@ -37,6 +38,10 @@ const AdminStudentsPage = async ({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold">Students</h1>
+        <StudentRegisterModal buttonLabel="Add Student" />
+      </div>
       <StudentsTable initialQueryString={queryString} />
     </HydrationBoundary>
   );

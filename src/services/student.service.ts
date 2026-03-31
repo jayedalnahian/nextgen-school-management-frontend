@@ -16,3 +16,35 @@ export const getStudents = async (queryString: string) => {
     throw error;
   }
 };
+
+export const registerStudent = async (payload: {
+  name: string;
+  dob: string;
+  gender: "MALE" | "FEMALE" | "OTHER";
+  classId: string;
+  parentId: string;
+}) => {
+  try {
+    const result = await httpClient.post("/students", payload);
+
+    if (!result.success) {
+      return {
+        success: false,
+        message: result.message || "Failed to register student",
+        error: result,
+      };
+    }
+
+    return {
+      success: true,
+      data: result.data,
+      message: result.message || "Student registered successfully",
+    };
+  } catch (error: any) {
+    console.error("Register student error:", error);
+    return {
+      success: false,
+      message: error.message || "An unexpected error occurred",
+    };
+  }
+};

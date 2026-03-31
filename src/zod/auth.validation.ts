@@ -77,3 +77,16 @@ export const resetPasswordSchema = z.object({
 });
 
 export type IResetPasswordPayload = z.infer<typeof resetPasswordSchema>;
+
+// Student registration schema
+export const registerStudentSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  dob: z.string().min(1, "Date of birth is required"),
+  gender: z.enum(["MALE", "FEMALE", "OTHER"], {
+    message: "Please select a valid gender",
+  }),
+  classId: z.string().min(1, "Please select a class"),
+  parentId: z.string().min(1, "Please select a parent"),
+});
+
+export type IRegisterStudentPayload = z.infer<typeof registerStudentSchema>;

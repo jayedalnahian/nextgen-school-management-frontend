@@ -51,7 +51,7 @@ function DialogOverlay({
   );
 }
 
-// Dialog Content Component - 16:9 ratio centered
+// Dialog Content Component - Full screen on mobile, 16:9 on desktop
 function DialogContent({
   className,
   children,
@@ -60,10 +60,13 @@ function DialogContent({
   return (
     <div
       className={cn(
-        "fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2",
-        "w-[90vw] max-w-4xl",
-        "bg-background rounded-lg shadow-lg",
-        "flex flex-col",
+        "fixed z-50 bg-background shadow-lg flex flex-col",
+        // Mobile: full screen
+        "inset-0 w-full h-full",
+        // Desktop: centered with 16:9 ratio
+        "sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2",
+        "sm:w-[90vw] sm:max-w-4xl sm:h-auto",
+        "sm:rounded-lg",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -215,7 +218,7 @@ export function UserRegisterModal({
 
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <DialogOverlay onClick={handleClose} />
+          <DialogOverlay />
           <DialogContent>
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b">
