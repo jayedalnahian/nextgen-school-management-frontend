@@ -14,6 +14,7 @@ import { useMemo } from "react";
 import { DataTableFilterConfig } from "@/components/shared/data-table/DataTableFilters";
 import { UserEditModal } from "@/components/shared/UserEditModal";
 import { UserViewModal } from "@/components/shared/UserViewModal";
+import { UserDeleteModal } from "@/components/shared/UserDeleteModal";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
@@ -28,6 +29,8 @@ const TeachersTable = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [viewingUser, setViewingUser] = useState<ITeacher | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [deletingUser, setDeletingUser] = useState<ITeacher | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const {
     queryStringFromUrl,
@@ -86,7 +89,13 @@ const TeachersTable = ({
   };
 
   const handleDelete = (teacher: ITeacher) => {
-    console.log(teacher);
+    setDeletingUser(teacher);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setDeletingUser(null);
   };
 
   const filterConfigs = useMemo<DataTableFilterConfig[]>(() => {
@@ -152,6 +161,16 @@ const TeachersTable = ({
       }
     : null;
 
+  // Convert ITeacher to IUser format for UserDeleteModal
+  const userForDeleteModal = deletingUser
+    ? {
+        id: deletingUser.id,
+        email: deletingUser.email,
+        name: deletingUser.name,
+        role: deletingUser.role as "ADMIN" | "TEACHER" | "PARENT" | "SUPER_ADMIN",
+      }
+    : null;
+
   return (
     <div>
       {userForViewModal && (
@@ -168,6 +187,16 @@ const TeachersTable = ({
           onClose={handleCloseEditModal}
           onSuccess={() => {
             handleCloseEditModal();
+          }}
+        />
+      )}
+      {userForDeleteModal && (
+        <UserDeleteModal
+          user={userForDeleteModal}
+          isOpen={isDeleteModalOpen}
+          onClose={handleCloseDeleteModal}
+          onSuccess={() => {
+            handleCloseDeleteModal();
           }}
         />
       )}

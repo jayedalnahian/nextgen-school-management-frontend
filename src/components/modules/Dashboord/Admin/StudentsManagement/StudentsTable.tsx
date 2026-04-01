@@ -12,7 +12,8 @@ import { useServerManagedDataTable } from "@/hooks/useServerManagedDataTable";
 import { useSearchParams } from "next/navigation";
 import { useServerManagedDataTableSearch } from "@/hooks/useServerManagedDataTableSearch";
 import { useServerManagedDataTableFilters, serverManagedFilter, ServerManagedFilterDefinition } from "@/hooks/useServerManagedDataTableFilters";
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
+import { StudentEditModal } from "@/components/shared/StudentEditModal";
 import { DataTableFilterConfig } from "@/components/shared/data-table/DataTableFilters";
 
 const DEFAULT_PAGE = 1;
@@ -64,6 +65,11 @@ const StudentsTable = ({
   const classes: IClass[] = classesResponse?.data || [];
   const parents: IParent[] = parentsResponse?.data || [];
 
+  // State for edit modal
+  const [editingStudent, setEditingStudent] = useState<IStudent | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Filter definitions
   const filterDefinitions = useMemo<ServerManagedFilterDefinition[]>(() => {
     return [
       serverManagedFilter.single("classId"),
@@ -77,10 +83,6 @@ const StudentsTable = ({
       definitions: filterDefinitions,
       updateParams,
     });
-
-  const handleView = (student: IStudent) => {
-    console.log(student);
-  };
 
   const filterConfigs = useMemo<DataTableFilterConfig[]>(() => {
     const classOptions = classes.map((cls) => ({
@@ -109,13 +111,26 @@ const StudentsTable = ({
     ];
   }, [classes, parents]);
 
+  // Handler for opening edit modal
   const handleEdit = (student: IStudent) => {
-    console.log(student);
+    setEditingStudent(student);
+    setIsEditModalOpen(true);
   };
 
-  const handleDelete = (student: IStudent) => {
-    console.log(student);
+  // Handler for closing edit modal
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingStudent(null);
   };
+
+  // Handler for view (placeholder for now)
+  const handleView = (student: IStudent) => {
+    console.log("View student:", student);
+  };
+
+
+
+
 
   const { data: studentDataResponse, isLoading } = useQuery({
     queryKey: ["students", queryString],
@@ -155,9 +170,22 @@ const StudentsTable = ({
         actions={{
           onEdit: handleEdit,
           onView: handleView,
-          onDelete: handleDelete,
         }}
       />
+
+      {/* Student Edit Modal */}
+      {editingStudent && (
+        <StudentEditModal
+          student={editingStudent}
+          classes={classes}
+          parents={parents}
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          onSuccess={() => {
+            handleCloseEditModal();
+          }}
+        />
+      )}
     </div>
   );
 };

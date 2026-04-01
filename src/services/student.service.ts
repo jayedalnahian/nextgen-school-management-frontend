@@ -48,3 +48,38 @@ export const registerStudent = async (payload: {
     };
   }
 };
+
+export const updateStudent = async (
+  id: string,
+  payload: {
+    name?: string;
+    dob?: string;
+    gender?: "MALE" | "FEMALE" | "OTHER";
+    classId?: string;
+    roll?: number;
+  }
+) => {
+  try {
+    const result = await httpClient.patch(`/students/${id}`, payload);
+
+    if (!result.success) {
+      return {
+        success: false,
+        message: result.message || "Failed to update student",
+        error: result,
+      };
+    }
+
+    return {
+      success: true,
+      data: result.data,
+      message: result.message || "Student updated successfully",
+    };
+  } catch (error: any) {
+    console.error("Update student error:", error);
+    return {
+      success: false,
+      message: error.message || "An unexpected error occurred",
+    };
+  }
+};

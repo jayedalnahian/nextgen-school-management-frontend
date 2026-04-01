@@ -295,3 +295,29 @@ export async function updateUser(
     };
   }
 }
+
+export async function deleteUser(id: string) {
+  try {
+    const result = await httpClient.delete(`/users/${id}`);
+
+    if (!result.success) {
+      return {
+        success: false,
+        message: result.message || "Failed to delete user",
+        error: result,
+      };
+    }
+
+    return {
+      success: true,
+      data: result.data,
+      message: result.message || "User deleted successfully",
+    };
+  } catch (error: any) {
+    console.error("Delete user error:", error);
+    return {
+      success: false,
+      message: error.message || "An unexpected error occurred",
+    };
+  }
+}
