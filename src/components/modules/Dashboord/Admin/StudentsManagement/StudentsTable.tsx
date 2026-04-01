@@ -14,6 +14,7 @@ import { useServerManagedDataTableSearch } from "@/hooks/useServerManagedDataTab
 import { useServerManagedDataTableFilters, serverManagedFilter, ServerManagedFilterDefinition } from "@/hooks/useServerManagedDataTableFilters";
 import { useState, useMemo } from "react";
 import { StudentEditModal } from "@/components/shared/StudentEditModal";
+import { StudentViewModal } from "@/components/shared/StudentViewModal";
 import { DataTableFilterConfig } from "@/components/shared/data-table/DataTableFilters";
 
 const DEFAULT_PAGE = 1;
@@ -69,6 +70,10 @@ const StudentsTable = ({
   const [editingStudent, setEditingStudent] = useState<IStudent | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  // State for view modal
+  const [viewingStudent, setViewingStudent] = useState<IStudent | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+
   // Filter definitions
   const filterDefinitions = useMemo<ServerManagedFilterDefinition[]>(() => {
     return [
@@ -123,9 +128,15 @@ const StudentsTable = ({
     setEditingStudent(null);
   };
 
-  // Handler for view (placeholder for now)
+  // Handler for view modal
   const handleView = (student: IStudent) => {
-    console.log("View student:", student);
+    setViewingStudent(student);
+    setIsViewModalOpen(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setViewingStudent(null);
   };
 
 
@@ -184,6 +195,15 @@ const StudentsTable = ({
           onSuccess={() => {
             handleCloseEditModal();
           }}
+        />
+      )}
+
+      {/* Student View Modal */}
+      {viewingStudent && (
+        <StudentViewModal
+          student={viewingStudent}
+          isOpen={isViewModalOpen}
+          onClose={handleCloseViewModal}
         />
       )}
     </div>
