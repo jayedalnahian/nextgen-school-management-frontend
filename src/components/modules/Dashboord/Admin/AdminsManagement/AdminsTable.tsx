@@ -13,6 +13,7 @@ import { useServerManagedDataTableFilters, serverManagedFilter, ServerManagedFil
 import { useMemo } from "react";
 import { DataTableFilterConfig } from "@/components/shared/data-table/DataTableFilters";
 import { UserEditModal } from "@/components/shared/UserEditModal";
+import { UserViewModal } from "@/components/shared/UserViewModal";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
@@ -25,6 +26,8 @@ const AdminsTable = ({
   const searchParams = useSearchParams();
   const [editingUser, setEditingUser] = useState<IAdmin | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [viewingUser, setViewingUser] = useState<IAdmin | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const {
     queryStringFromUrl,
@@ -63,7 +66,13 @@ const AdminsTable = ({
     });
 
   const handleView = (admin: IAdmin) => {
-    console.log(admin);
+    setViewingUser(admin);
+    setIsViewModalOpen(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setViewingUser(null);
   };
 
   const handleEdit = (admin: IAdmin) => {
@@ -120,12 +129,38 @@ const AdminsTable = ({
         image: editingUser.image,
         role: editingUser.role as "ADMIN" | "TEACHER" | "PARENT" | "SUPER_ADMIN",
         status: editingUser.status,
+        emailVerified: editingUser.emailVerified,
+        createdAt: editingUser.createdAt,
+        updatedAt: editingUser.updatedAt,
         admin: editingUser.admin,
+      }
+    : null;
+
+  // Convert IAdmin to IUser format for UserViewModal
+  const userForViewModal = viewingUser
+    ? {
+        id: viewingUser.id,
+        email: viewingUser.email,
+        name: viewingUser.name,
+        image: viewingUser.image,
+        role: viewingUser.role as "ADMIN" | "TEACHER" | "PARENT" | "SUPER_ADMIN",
+        status: viewingUser.status,
+        emailVerified: viewingUser.emailVerified,
+        createdAt: viewingUser.createdAt,
+        updatedAt: viewingUser.updatedAt,
+        admin: viewingUser.admin,
       }
     : null;
 
   return (
     <div>
+      {userForViewModal && (
+        <UserViewModal
+          user={userForViewModal}
+          isOpen={isViewModalOpen}
+          onClose={handleCloseViewModal}
+        />
+      )}
       {userForEditModal && (
         <UserEditModal
           user={userForEditModal}

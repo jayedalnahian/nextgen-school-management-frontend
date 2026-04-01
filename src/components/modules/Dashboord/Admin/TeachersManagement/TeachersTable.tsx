@@ -13,6 +13,7 @@ import { useServerManagedDataTableFilters, serverManagedFilter, ServerManagedFil
 import { useMemo } from "react";
 import { DataTableFilterConfig } from "@/components/shared/data-table/DataTableFilters";
 import { UserEditModal } from "@/components/shared/UserEditModal";
+import { UserViewModal } from "@/components/shared/UserViewModal";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
@@ -25,6 +26,8 @@ const TeachersTable = ({
   const searchParams = useSearchParams();
   const [editingUser, setEditingUser] = useState<ITeacher | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [viewingUser, setViewingUser] = useState<ITeacher | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const {
     queryStringFromUrl,
@@ -63,7 +66,13 @@ const TeachersTable = ({
     });
 
   const handleView = (teacher: ITeacher) => {
-    console.log(teacher);
+    setViewingUser(teacher);
+    setIsViewModalOpen(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setViewingUser(null);
   };
 
   const handleEdit = (teacher: ITeacher) => {
@@ -120,12 +129,38 @@ const TeachersTable = ({
         image: editingUser.image,
         role: editingUser.role as "ADMIN" | "TEACHER" | "PARENT" | "SUPER_ADMIN",
         status: editingUser.status,
+        emailVerified: editingUser.emailVerified,
+        createdAt: editingUser.createdAt,
+        updatedAt: editingUser.updatedAt,
         teacher: editingUser.teacher,
+      }
+    : null;
+
+  // Convert ITeacher to IUser format for UserViewModal
+  const userForViewModal = viewingUser
+    ? {
+        id: viewingUser.id,
+        email: viewingUser.email,
+        name: viewingUser.name,
+        image: viewingUser.image,
+        role: viewingUser.role as "ADMIN" | "TEACHER" | "PARENT" | "SUPER_ADMIN",
+        status: viewingUser.status,
+        emailVerified: viewingUser.emailVerified,
+        createdAt: viewingUser.createdAt,
+        updatedAt: viewingUser.updatedAt,
+        teacher: viewingUser.teacher,
       }
     : null;
 
   return (
     <div>
+      {userForViewModal && (
+        <UserViewModal
+          user={userForViewModal}
+          isOpen={isViewModalOpen}
+          onClose={handleCloseViewModal}
+        />
+      )}
       {userForEditModal && (
         <UserEditModal
           user={userForEditModal}
