@@ -87,7 +87,7 @@ const VerifyEmailForm = () => {
           return;
         }
       } catch (error: any) {
-        // console.log(`Verification failed: ${error.message}`);
+         console.error(`Verification failed: ${error.message}`);
 
         if (
           error &&

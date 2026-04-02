@@ -1,15 +1,6 @@
-enum Role {
-  SUPER_ADMIN = "SUPER_ADMIN",
-  ADMIN = "ADMIN",
-  TEACHER = "TEACHER",
-  PARENT = "PARENT"
-}
+import { UserRole } from "@/lib/authUtils";
+import { UserStatus } from "./user.types";
 
-enum UserStatus {
-  ACTIVE = "ACTIVE",
-  INACTIVE = "INACTIVE",
-  SUSPENDED = "SUSPENDED"
-}
 
 export interface IParent {
   id: string;
@@ -19,7 +10,7 @@ export interface IParent {
   image: string | null;
   createdAt: string;
   updatedAt: string;
-  role: Role;
+  role: UserRole;
   status: UserStatus;
   needPasswordChange: boolean;
   isDeleted: boolean;

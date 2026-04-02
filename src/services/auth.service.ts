@@ -298,7 +298,9 @@ export async function updateUser(
 
 export async function deleteUser(id: string) {
   try {
+    console.log(id , "id")
     const result = await httpClient.delete(`/users/${id}`);
+    console.log(result, "result")
 
     if (!result.success) {
       return {

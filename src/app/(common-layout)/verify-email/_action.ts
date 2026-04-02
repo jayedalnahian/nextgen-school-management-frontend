@@ -60,7 +60,7 @@ export const verifyEmailAction = async (
           : getDefaultDashboardRoute(role as UserRole);
     }
   } catch (error: any) {
-    // console.log(error, "error");
+    console.error(error, "error");
 
     if (
       error &&
@@ -114,7 +114,7 @@ export const resendOTPAction = async (payload: {
       message: "Verification code resent successfully",
     };
   } catch (error: any) {
-    // console.log(error, "error resending otp");
+    console.error(error, "error resending otp");
     return {
       success: false,
       message: `Resend failed: ${error.message}`,

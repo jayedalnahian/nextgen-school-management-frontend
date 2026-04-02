@@ -49,7 +49,7 @@ const LoginFormAuth = ({ redirectPath }: LoginFormProps) => {
           return;
         }
       } catch (error: any) {
-        // console.log(`Login failed: ${error.message}`);
+      console.error(`Login failed: ${error.message}`);
 
         // Next.js redirect is handled by throwing an error, catch and manually apply it
         if (

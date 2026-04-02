@@ -10,7 +10,7 @@ export async function getDashboardData() {
 
     return response;
   } catch (error: any) {
-    // console.log(error, "From Dashboard Server Action");
+     console.log(error, "From Dashboard Server Action");
     return {
       success: false,
       message:

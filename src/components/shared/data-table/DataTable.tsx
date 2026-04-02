@@ -46,6 +46,7 @@ interface DataTableProps<TData> {
   data: TData[];
   columns: ColumnDef<TData>[];
   actions?: DataTableActions<TData>;
+  enableHardcodedActions?: boolean;
   toolbarAction?: React.ReactNode;
   emptyMessage?: string;
   isLoading?: boolean;
@@ -79,6 +80,7 @@ const DataTable = <TData,>({
   data = [] as TData[],
   columns,
   actions,
+  enableHardcodedActions = true,
   toolbarAction,
   emptyMessage,
   isLoading,
@@ -97,7 +99,7 @@ const DataTable = <TData,>({
   const hydratedIsLoading = hasHydrated ? Boolean(isLoading) : false;
   const showLoadingOverlay = hydratedIsLoading;
 
-  const tableColumns: ColumnDef<TData>[] = actions
+  const tableColumns: ColumnDef<TData>[] = actions && enableHardcodedActions
     ? [
         ...columns,
 

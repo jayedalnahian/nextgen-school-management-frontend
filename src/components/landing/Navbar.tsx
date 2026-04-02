@@ -93,7 +93,7 @@ export function Navbar({
 
   const dashboardRoute = auth.role ? getDefaultDashboardRoute(auth.role) : "/";
 
-  // console.log(dashboardRoute, "dashboardRoute")
+
 
   const initials = auth.name
     ? auth.name

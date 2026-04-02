@@ -1,15 +1,6 @@
-enum Role {
-  SUPER_ADMIN = "SUPER_ADMIN",
-  ADMIN = "ADMIN",
-  TEACHER = "TEACHER",
-  PARENT = "PARENT"
-}
 
-enum UserStatus {
-  ACTIVE = "ACTIVE",
-  INACTIVE = "INACTIVE",
-  SUSPENDED = "SUSPENDED"
-}
+import { UserRole } from "@/lib/authUtils";
+import { UserStatus } from "./user.types";
 
 export interface IAdmin {
   id: string;
@@ -19,7 +10,7 @@ export interface IAdmin {
   image: string | null;
   createdAt: string;
   updatedAt: string;
-  role: Role;
+  role: UserRole;
   status: UserStatus;
   needPasswordChange: boolean;
   isDeleted: boolean;

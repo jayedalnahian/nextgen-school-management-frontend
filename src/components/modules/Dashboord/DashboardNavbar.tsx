@@ -8,7 +8,7 @@ const DashboardNavbar = ({ userInfo }: { userInfo: any }) => {
   const dashboardHome = getDefaultDashboardRoute(userInfo.role)
 
 
-  console.log(userInfo, "userInfo")
+
   return (
     <DashboardNavbarContent
       userInfo={userInfo}
