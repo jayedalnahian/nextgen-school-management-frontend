@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import DataTable from "@/components/shared/data-table/DataTable";
+import { ClassViewModal } from "@/components/shared/ClassViewModal";
+import { ClassEditModal } from "@/components/shared/ClassEditModal";
 import { getClasses } from "@/services/class.service";
 import { IClass } from "@/types/class.types";
 import { useQuery } from "@tanstack/react-query";
@@ -85,13 +88,29 @@ const ClassesTable = ({
     ];
   }, [allClassesResponse]);
 
-  // Dummy action handlers for now
-  const handleView = (classItem: IClass) => {
-    console.log("View class:", classItem);
+  // Modal state for viewing class details
+  const [selectedClass, setSelectedClass] = useState<IClass | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const handleViewDetails = (classItem: IClass) => {
+    setSelectedClass(classItem);
+    setIsViewModalOpen(true);
   };
 
-  const handleEdit = (classItem: IClass) => {
-    console.log("Edit class:", classItem);
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setSelectedClass(null);
+  };
+
+  const handleEditClass = (classItem: IClass) => {
+    setSelectedClass(classItem);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedClass(null);
   };
 
   const { data: classDataResponse, isLoading } = useQuery({
@@ -101,12 +120,58 @@ const ClassesTable = ({
 
   const classes = (classDataResponse?.data || []) as IClass[];
 
+  // Create columns with view handler
+  const columnsWithActions = useMemo(() => {
+    return classesColumns.map((col) => {
+      if (col.id === "actions") {
+        return {
+          ...col,
+          cell: ({ row }: { row: { original: IClass } }) => {
+            const classItem = row.original;
+            const ClassActionsDropdown = require("./ClassActionsDropdown").ClassActionsDropdown;
+            return (
+              <ClassActionsDropdown
+                classData={classItem}
+                onViewDetails={handleViewDetails}
+                onEditClass={handleEditClass}
+                onViewAssignedTeachers={(data) => console.log("View assigned teachers:", data)}
+                onAssignTeacher={(data) => console.log("Assign teacher:", data)}
+                onViewAssignedStudents={(data) => console.log("View assigned students:", data)}
+                onAssignStudent={(data) => console.log("Assign student:", data)}
+                onViewAssignedSubjects={(data) => console.log("View assigned subjects:", data)}
+                onAssignSubject={(data) => console.log("Assign subject:", data)}
+              />
+            );
+          },
+        };
+      }
+      return col;
+    });
+  }, []);
+
   return (
     <div>
+      {selectedClass && (
+        <ClassViewModal
+          classData={selectedClass}
+          isOpen={isViewModalOpen}
+          onClose={handleCloseViewModal}
+        />
+      )}
+      {selectedClass && (
+        <ClassEditModal
+          classData={selectedClass}
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          onSuccess={() => {
+            handleCloseEditModal();
+          }}
+        />
+      )}
       <DataTable
         data={classes}
         meta={classDataResponse?.meta}
-        columns={classesColumns}
+        columns={columnsWithActions}
         isLoading={isLoading}
         emptyMessage="No classes found."
         enableHardcodedActions={false}

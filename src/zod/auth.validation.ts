@@ -113,3 +113,13 @@ export const registerStudentSchema = z.object({
 });
 
 export type IRegisterStudentPayload = z.infer<typeof registerStudentSchema>;
+
+// Class update schema
+export const updateClassSchema = z.object({
+  name: z.string().min(1, "Class name is required").optional(),
+  section: z.string().optional(),
+  monthlyFee: z.number().min(0, "Monthly fee cannot be negative").optional(),
+  capacity: z.number().int().min(0, "Capacity cannot be negative").optional(),
+});
+
+export type IUpdateClassPayload = z.infer<typeof updateClassSchema>;
